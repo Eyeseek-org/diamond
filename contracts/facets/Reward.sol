@@ -29,8 +29,7 @@ contract RewardFacet is Modifiers {
         uint256 _type
     ) public {
         if (_rewardAmount < 0) revert InvalidAmount(_rewardAmount);
-        console.log('passed');
-         if (msg.sender == address(0)) revert InvalidAddress(msg.sender);
+        if (msg.sender == address(0)) revert InvalidAddress(msg.sender);
         if (_type == 0) {
             s.rewards.push(
                 RewardPool({
