@@ -141,9 +141,6 @@ contract MasterFacet  {
         ///@dev currently done manually - need batch for automation
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         if (s.funds[_id].balance <= 0) revert LowBalance(s.funds[_id].balance);
-        console.log(s.funds[_id].usdcBalance);
-        console.log(s.funds[_id].usdtBalance);
-        console.log(s.funds[_id].balance);
         s.funds[_id].balance = 0;
         s.funds[_id].state = 2;
         if (s.funds[_id].usdcBalance > 0) {
@@ -270,9 +267,9 @@ contract MasterFacet  {
 
     /// @notice Charge rewards during contribution process
     function rewardCharge(uint256 _rewardId) internal {
-        if (s.rewards[_rewardId].state != 1) revert FundInactive(_rewardId);
+        if (s.rewards[_rewardId].state == 5) revert FundInactive(_rewardId);
         if (
-            s.rewards[_rewardId].actualNumber >=
+            s.rewards[_rewardId].actualNumber >
             s.rewards[_rewardId].totalNumber
         ) revert RewardFull(_rewardId);
         s.rewards[_rewardId].actualNumber += 1;
@@ -333,7 +330,6 @@ contract MasterFacet  {
     function cancelFund(uint256 _id) public {
         // TBD reentrancy
         LibDiamond.enforceIsContractOwner();
-
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         s.funds[_id].state = 0;
         if (s.funds[_id].usdcBalance > 0) {
@@ -344,33 +340,32 @@ contract MasterFacet  {
             cancelUni(_id, s.funds[_id].usdtBalance, 2, s.usdt);
             s.funds[_id].usdtBalance = 0;
         }
-
-        for (uint256 i = 0; i < s.rewards.length; i++){
+     																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				            
+        for (uint256 i = 0; i < s.rewards.length; i++) {
             if (s.rewards[i].fundId == _id && s.rewards[i].totalNumber > 0){
-                if (s.rewards[i].state == 1){
-                    IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-                    rewardToken.approve(
-                        address(this),
-                        s.rewards[i].erc20amount
-                    );
-                    rewardToken.transferFrom(
-                        address(this),
-                        s.funds[_id].owner,
-                        s.rewards[i].erc20amount
-                    );
-                } else if (s.rewards[i].state == 2){
-                    IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
-                    rewardNft.setApprovalForAll(address(this), true);
-                    rewardNft.safeTransferFrom(
-                        address(this),
-                        s.funds[_id].owner,
-                        s.rewards[i].nftId,
-                        s.rewards[i].totalNumber,
-                        ""
-                    );
-                }
-            }
-        }
+                    if (s.rewards[i].state == 2 ) {
+                        ///@dev - Note frontend and contract use different states to identify type
+                        IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
+                        rewardToken.approve(address(this), s.rewards[i].erc20amount);
+                        rewardToken.transferFrom(
+                            address(this),
+                            s.funds[_id].owner,
+                            s.rewards[i].erc20amount 
+                            );
+                        }
+                    else if (s.rewards[i].state == 1){
+                        IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
+                        rewardNft.setApprovalForAll(address(this), true);
+                        rewardNft.safeTransferFrom(
+                            address(this),
+                            s.funds[_id].owner,
+                            s.rewards[i].nftId,
+                            s.rewards[i].totalNumber,
+                            ""
+                        );
+                    } 
+                }  
+            }  
     }
         ///@notice - Cancel the fund and return the resources to the microfunds, universal for all supported currencies
     function cancelUni(
@@ -382,11 +377,9 @@ contract MasterFacet  {
         for (uint256 i = 0; i < s.microFunds.length; i++) {
             if (
                 s.microFunds[i].fundId == _id &&
-                s.microFunds[i].state == 1 &&
-                s.microFunds[i].currency == _currency
+                s.microFunds[i].currency == _currency 
             ) {
                 /// @notice Send back the remaining amount to the microfund owner
-                if (s.microFunds[i].cap > s.microFunds[i].microBalance) {
                     s.microFunds[i].state = 4;
                     s.funds[_id].balance -= s.microFunds[i].microBalance;
                     _fundBalance -= s.microFunds[i].microBalance;
@@ -396,13 +389,12 @@ contract MasterFacet  {
                         s.microFunds[i].owner,
                         s.microFunds[i].cap
                     );
-
                     emit Returned(
                         s.microFunds[i].owner,
                         s.microFunds[i].cap,
                         s.funds[i].owner
                     );
-                }
+                
             }
         }
         ///@dev Fund states - 0=Created, 1=Distributed, 2=Refunded
