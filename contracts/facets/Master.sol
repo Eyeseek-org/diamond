@@ -141,9 +141,6 @@ contract MasterFacet  {
         ///@dev currently done manually - need batch for automation
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         if (s.funds[_id].balance <= 0) revert LowBalance(s.funds[_id].balance);
-        console.log(s.funds[_id].usdcBalance);
-        console.log(s.funds[_id].usdtBalance);
-        console.log(s.funds[_id].balance);
         s.funds[_id].balance = 0;
         s.funds[_id].state = 2;
         if (s.funds[_id].usdcBalance > 0) {
@@ -344,7 +341,6 @@ contract MasterFacet  {
             cancelUni(_id, s.funds[_id].usdtBalance, 2, s.usdt);
             s.funds[_id].usdtBalance = 0;
         }
-
         for (uint256 i = 0; i < s.rewards.length; i++){
             if (s.rewards[i].fundId == _id && s.rewards[i].totalNumber > 0){
                 if (s.rewards[i].state == 1){
@@ -382,11 +378,9 @@ contract MasterFacet  {
         for (uint256 i = 0; i < s.microFunds.length; i++) {
             if (
                 s.microFunds[i].fundId == _id &&
-                s.microFunds[i].state == 1 &&
-                s.microFunds[i].currency == _currency
+                s.microFunds[i].currency == _currency 
             ) {
                 /// @notice Send back the remaining amount to the microfund owner
-                if (s.microFunds[i].cap > s.microFunds[i].microBalance) {
                     s.microFunds[i].state = 4;
                     s.funds[_id].balance -= s.microFunds[i].microBalance;
                     _fundBalance -= s.microFunds[i].microBalance;
@@ -396,13 +390,12 @@ contract MasterFacet  {
                         s.microFunds[i].owner,
                         s.microFunds[i].cap
                     );
-
                     emit Returned(
                         s.microFunds[i].owner,
                         s.microFunds[i].cap,
                         s.funds[i].owner
                     );
-                }
+                
             }
         }
         ///@dev Fund states - 0=Created, 1=Distributed, 2=Refunded

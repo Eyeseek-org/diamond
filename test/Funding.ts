@@ -23,6 +23,7 @@ describe("Funding", async function () {
   let fundFacet: FundFacet;
   // let rewardFacet: RewardFacet;
   let masterFacet: MasterFacet;
+  let rewardFacet: RewardFacet;
 
   let donationToken: Token;
   let usdtToken: Token
@@ -94,7 +95,6 @@ describe("Funding", async function () {
 
   it("Basic e2e - Create fund, contribute and check balances", async function () {
     const [user, receiver] = await ethers.getSigners()
-    // 1 = Zero data
     fundFacet.createFund(1000, {from: receiver.address})
     const fundAmount = 500
     const testId = 1
@@ -124,28 +124,42 @@ describe("Funding", async function () {
     const dUsdcBalance = await usdcToken.balanceOf(diamondAddress)
     expect(dUsdcBalance).to.equal(fundAmount)
     //---------- Distribute and calculate balance after 
-    await masterFacet.distribute(testId);
+        // await masterFacet.distribute(1);
+    await masterFacet.cancelFund(testId);
 
+    const bal = await donationToken.balanceOf(diamondAddress)
+    expect(bal).to.equal(0)
+    
     const bUserBAfter = await donationToken.balanceOf(user.address)
     expect(bUserBAfter).to.equal(bUserBefore)
 
 
-    // await masterFacet.createReward(1,1,100,usdcToken.address,1, {from: user.address})
+
+})
+
+
+it("Reward creation and distribution test", async function () {
+   const [user, receiver] = await ethers.getSigners()
+   const fundAmount = 500
+   const rewardAmount = 100
+   const testId = 2
+   fundFacet.createFund(1000);
+
+   await donationToken.approve(diamondAddress, fundAmount, {from: user.address})
+   await masterFacet.contribute(0,fundAmount,testId,1,0, {from: user.address})
+
+   await usdcToken.approve(diamondAddress, rewardAmount, {from: user.address})
+   await rewardFacet.createReward(testId,1,rewardAmount,usdcToken.address,1, {from: user.address})
     // console.log('First reward created');
     // await masterFacet.createReward(1,50,1,usdcToken.address,0, {from: user.address})
     // console.log('Second reward created');
     // 150 offered in total
 
+    
+
     // const multiBalance = await multiToken.balanceOf(user.address, 0)
     // console.log("Multi balance before: " + multiBalance)
     // await multiToken.setApprovalForAll(donation.address, true, {from: user.address})
 //    await donation.createReward(1,1, multiToken.address, 0, {from: user.address})
-  //   await donation.distribute(1, {from: user.address});
-    // await fundFacet.cancelFund(1);
-})
-
-it("Reward creation and distribution test", async function () {
-   const [user, receiver] = await ethers.getSigners()
-
   })
 });
