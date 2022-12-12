@@ -186,23 +186,26 @@ describe("Funding", async function () {
   });
   it("Test mutlicall operation", async function () {
     const [bank, user1, user2, user3, user4, creator] = await ethers.getSigners();
-    // Sendind exact 11 tokens for all test actors
+    // Sending exact 11 tokens for all test actors
     await donationToken.connect(bank).transfer(user1.address, 11);
     await donationToken.connect(bank).transfer(user2.address, 11);
     await donationToken.connect(bank).transfer(user3.address, 11);
     await donationToken.connect(bank).transfer(user4.address, 11);
-    await donationToken.connect(bank).transfer(creator.address, 11);
+    await donationToken.connect(user1).approve(masterFacet.address, 11);
+    await donationToken.connect(user2).approve(masterFacet.address, 11);
+    await donationToken.connect(user3).approve(masterFacet.address, 11);
+    await donationToken.connect(user4).approve(masterFacet.address, 11);
     const donationAmount = 1;
     const microfundAmount = 10;
     const testId = 3;
     fundFacet.connect(creator).createFund(100);
-    // ---------------- TO DO
+    // ---------------- Contribution from all users
     // Execute same contribution from 4x different users, contribution "donationToken"
-    // Currently error Contract with a Signer cannot override from
-     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user1.address});
-     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user2.address});
-     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user3.address});
-     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user4.address});
+
+    await masterFacet.connect(user1).contribute(microfundAmount, donationAmount, testId, 1, 0);
+    await masterFacet.connect(user2).contribute(microfundAmount, donationAmount, testId, 1, 0);
+    await masterFacet.connect(user3).contribute(microfundAmount, donationAmount, testId, 1, 0);
+    await masterFacet.connect(user4).contribute(microfundAmount, donationAmount, testId, 1, 0);
 
 
     // ---------------- Result after distribution
@@ -210,6 +213,7 @@ describe("Funding", async function () {
     await masterFacet.distribute(testId); 
 
     // Retrieve balances of all users
+    const balMaster = await donationToken.balanceOf(masterFacet.address);
     const balCreator = await donationToken.balanceOf(creator.address);
     const balUser1 = await donationToken.balanceOf(user1.address);
     const balUser2 = await donationToken.balanceOf(user2.address);
@@ -218,7 +222,7 @@ describe("Funding", async function () {
 
     console.log(balCreator, balUser1, balUser2, balUser3, balUser4);
     // No token should be left in the contract
-    expect(masterFacet).to.equal(0);
+    expect(balMaster).to.equal(0);
     // User 1 should have 4 tokens less then before the contribution
     expect(balUser1).to.equal(7);
     // User 2 should have 3 token less then before the contribution
