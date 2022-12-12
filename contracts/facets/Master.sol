@@ -255,8 +255,7 @@ contract MasterFacet  {
             // TBD batch call
             if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
                     s.microFunds[i].state = 2; ///@dev closing the microfunds
-                    uint256 diff = s.microFunds[i].cap -
-                        s.microFunds[i].microBalance;
+                    uint256 diff = s.microFunds[i].cap - s.microFunds[i].microBalance;
                     _token.approve(address(this), diff);
                     s.microFunds[i].microBalance = 0; ///@dev resets the microfund
                     _token.transferFrom( address(this), s.microFunds[i].owner, diff);
