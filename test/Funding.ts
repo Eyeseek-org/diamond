@@ -12,7 +12,7 @@ import {
 
 import { deployDiamond } from "../scripts/libraries/deploy";
 
-let user, donationToken, donation, fund, cancelUser, receiver;
+let user, creator, fund, cancelUser, receiver;
 
 describe("Funding", async function () {
   let diamondAddress: string;
@@ -60,11 +60,7 @@ describe("Funding", async function () {
     masterFacet.createZeroData();
 
     // environment preparation, deploy token & staking contracts
-    const accounts = await ethers.getSigners();
-    user = accounts[3]; // Donor account
-    fund = accounts[4]; // Fund account
-    cancelUser = accounts[5]; // Cancel account
-    receiver = accounts[6]; // Receiver account
+    const [user] = await ethers.getSigners();
 
     const Usdt = await ethers.getContractFactory("Token");
     usdtToken = await Usdt.deploy();
@@ -141,7 +137,7 @@ describe("Funding", async function () {
   });
 
   it("Reward creation and distribution test", async function () {
-    const [user, receiver] = await ethers.getSigners();
+    const [user] = await ethers.getSigners();
     const fundAmount = 500;
     const rewardAmount = 100;
     const testId = 2;
@@ -187,5 +183,51 @@ describe("Funding", async function () {
     // console.log("Multi balance before: " + multiBalance)
     // await multiToken.setApprovalForAll(donation.address, true, {from: user.address})
     //    await donation.createReward(1,1, multiToken.address, 0, {from: user.address})
+  });
+  it("Test mutlicall operation", async function () {
+    const [bank, user1, user2, user3, user4, creator] = await ethers.getSigners();
+    // Sendind exact 11 tokens for all test actors
+    await donationToken.connect(bank).transfer(user1.address, 11);
+    await donationToken.connect(bank).transfer(user2.address, 11);
+    await donationToken.connect(bank).transfer(user3.address, 11);
+    await donationToken.connect(bank).transfer(user4.address, 11);
+    await donationToken.connect(bank).transfer(creator.address, 11);
+    const donationAmount = 1;
+    const microfundAmount = 10;
+    const testId = 3;
+    fundFacet.connect(creator).createFund(100);
+    // ---------------- TO DO
+    // Execute same contribution from 4x different users, contribution "donationToken"
+    // Currently error Contract with a Signer cannot override from
+     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user1.address});
+     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user2.address});
+     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user3.address});
+     await masterFacet.contribute(microfundAmount, donationAmount, testId, 1, 0, { from: user4.address});
+
+
+    // ---------------- Result after distribution
+    // Calling Distribution with new Multicall - testing specific distributeUni() internal function
+    await masterFacet.distribute(testId); 
+
+    // Retrieve balances of all users
+    const balCreator = await donationToken.balanceOf(creator.address);
+    const balUser1 = await donationToken.balanceOf(user1.address);
+    const balUser2 = await donationToken.balanceOf(user2.address);
+    const balUser3 = await donationToken.balanceOf(user3.address);
+    const balUser4 = await donationToken.balanceOf(user4.address);
+
+    console.log(balCreator, balUser1, balUser2, balUser3, balUser4);
+    // No token should be left in the contract
+    expect(masterFacet).to.equal(0);
+    // User 1 should have 4 tokens less then before the contribution
+    expect(balUser1).to.equal(7);
+    // User 2 should have 3 token less then before the contribution
+    expect(balUser2).to.equal(8);
+    // User 3 should have 2 token less then before the contribution
+    expect(balUser3).to.equal(9);
+    // User 4 should have 1 token less then before the contribution
+    expect(balUser4).to.equal(10);
+    // Creator should collect donations and drained microfunds
+    expect(balCreator).to.equal(10)
   });
 });
