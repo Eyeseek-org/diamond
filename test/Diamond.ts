@@ -7,7 +7,7 @@ import {
   OwnershipFacet,
 } from "../typechain-types";
 
-import { deployDiamond } from "../scripts/deploy";
+import { deployDiamond } from "../scripts/libraries/deploy";
 import {
   FacetCutAction,
   findAddressPositionInFacets,
@@ -26,7 +26,8 @@ describe("DiamondTest", async function () {
   const addresses: string[] = [];
 
   before(async function () {
-    diamondAddress = await deployDiamond();
+    const [_diamondAddress] = await deployDiamond();
+    diamondAddress = _diamondAddress;
     diamondCutFacet = await ethers.getContractAt(
       "DiamondCutFacet",
       diamondAddress
