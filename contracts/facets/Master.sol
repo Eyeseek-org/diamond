@@ -151,6 +151,7 @@ contract MasterFacet  {
             s.funds[_id].usdtBalance = 0;
         }
         /// @notice Distribute token reward to eligible users
+        /// TBD - Separate this function into Reward faucet file
         for (uint256 i = 0; i < s.rewards.length; i++) {
             IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
             IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
