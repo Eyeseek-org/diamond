@@ -142,92 +142,11 @@ contract MasterFacet  {
         ///@dev currently done manually - need batch for automation
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         if (s.funds[_id].balance <= 0) revert LowBalance(s.funds[_id].balance);
-        s.funds[_id].balance = 0;
         s.funds[_id].state = 2;
         if (s.funds[_id].usdcBalance > 0) {
             distributeUni(_id, s.funds[_id].usdcBalance, 1, s.usdc);
-            s.funds[_id].usdcBalance = 0;
         } else if (s.funds[_id].usdtBalance > 0) {
             distributeUni(_id, s.funds[_id].usdtBalance, 2, s.usdt);
-            s.funds[_id].usdtBalance = 0;
-        }
-        /// @notice Distribute token reward to eligible users
-        /// TBD - Separate this function into Reward faucet file
-        for (uint256 i = 0; i < s.rewards.length; i++) {
-            IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-            IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
-            if (s.rewards[i].fundId == _id) {
-                s.rewards[i].state = 3;
-                for (uint256 j = 0; j < s.rewardList.length; j++) {
-                    ///@notice - Check NFT rewards
-                    if (
-                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
-                        s.rewards[i].state == 1
-                    ) {
-                        rewardNft.setApprovalForAll(
-                            s.rewardList[i].receiver,
-                            true
-                        );
-                        rewardNft.safeTransferFrom(
-                            address(this),
-                            s.rewardList[j].receiver,
-                            s.rewards[i].nftId,
-                            1,
-                            ""
-                        );
-                        emit NftReward(
-                            s.rewardList[j].receiver,
-                            s.rewards[i].contractAddress,
-                            s.rewards[i].fundId
-                        );
-                    }
-                    ///@notice - Check ERC20 rewards
-                    else if (
-                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
-                        s.rewards[i].state == 2
-                    ) {
-                        rewardToken.approve(
-                            s.rewardList[i].receiver,
-                            s.rewards[i].erc20amount
-                        );
-                        rewardToken.transferFrom(
-                            address(this),
-                            s.rewardList[j].receiver,
-                            s.rewards[i].erc20amount
-                        );
-                        emit TokenReward(
-                            s.rewardList[j].receiver,
-                            s.rewards[i].erc20amount,
-                            s.rewards[i].fundId
-                        );
-                    }
-                }
-                if (s.rewards[i].totalNumber > s.rewards[i].actualNumber) {
-                    uint256 rewardsDiff = s.rewards[i].totalNumber -
-                        s.rewards[i].actualNumber;
-                    if (s.rewards[i].state == 1) {
-                        rewardNft.setApprovalForAll(s.rewards[i].owner, true);
-                        rewardNft.safeTransferFrom(
-                            address(this),
-                            s.rewards[i].owner,
-                            s.rewards[i].nftId,
-                            rewardsDiff,
-                            ""
-                        );
-                    } else if (s.rewards[i].state == 2) {
-                        rewardToken.approve(
-                            s.rewards[i].owner,
-                            s.rewards[i].erc20amount
-                        );
-                        rewardToken.transferFrom(
-                            address(this),
-                            s.rewards[i].owner,
-                            (s.rewards[i].erc20amount /
-                                s.rewards[i].totalNumber) * rewardsDiff
-                        );
-                    }
-                }
-            }
         }
     }
 
@@ -245,26 +164,61 @@ contract MasterFacet  {
         _token.approve(address(this), _fundBalance);
         _token.transferFrom(address(this), feeAddress, fee);
         _token.transferFrom(address(this), s.funds[_id].owner, gain);
+        _fundBalance -= gain;
+        s.funds[_id].balance -= gain;
         emit DistributionAccomplished(
             s.funds[_id].owner,
             _fundBalance,
             _currency,
             fee
         );
-            
         /// @notice Resources are returned back to the microfunds
+        // returnMicrofunds(_id, _currency, _token);
+    }
+
+    ///@notice - Single function to claim microfund leftovers separately
+    /// TBD only after deadline
+    function claimMicro(uint256 _id, address _add) public {
+        if (s.microFunds[_id].state != 1) revert FundInactive(_id);
+        if (s.microFunds[_id].cap == s.microFunds[_id].microBalance) revert LowBalance(s.microFunds[_id].microBalance);
+        if (s.microFunds[_id].owner != _add) revert InvalidAddress(s.microFunds[_id].owner);
+        s.microFunds[_id].state = 2; ///@dev closing the microfunds
+        uint256 diff = s.microFunds[_id].cap - s.microFunds[_id].microBalance;
+        uint256 fundId = s.microFunds[_id].fundId;
+        if (s.microFunds[_id].currency == 1){
+            s.usdc.approve(address(this), diff);   
+            s.usdc.transferFrom( address(this), s.microFunds[_id].owner, diff);
+        } else if (s.microFunds[_id].currency == 2){
+            s.usdt.approve(address(this), diff);   
+            s.usdt.transferFrom( address(this), s.microFunds[_id].owner, diff);
+        }
+        s.microFunds[_id].microBalance = 0; ///@dev resets the microfund
+        emit Returned( s.microFunds[_id].owner, diff, s.funds[fundId].owner );
+    }
+    
+
+    /// @notice Internal function activated if there are leftovers in deployed microfunds
+    function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) internal {
         for (uint256 i = 0; i < s.microFunds.length; i++) {
-            // TBD batch call
-            if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
-                    s.microFunds[i].state = 2; ///@dev closing the microfunds
-                    uint256 diff = s.microFunds[i].cap - s.microFunds[i].microBalance;
-                    _token.approve(address(this), diff);
-                    s.microFunds[i].microBalance = 0; ///@dev resets the microfund
-                    _token.transferFrom( address(this), s.microFunds[i].owner, diff);
-                    emit Returned( s.microFunds[i].owner, diff, s.funds[_id].owner);
+        if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
+            s.microFunds[i].state = 2; ///@dev closing the microfunds
+            uint256 diff = s.microFunds[i].cap - s.microFunds[i].microBalance;
+            _token.approve(address(this), diff);
+            s.microFunds[i].microBalance = 0; ///@dev resets the microfund
+            _token.transferFrom( address(this), s.microFunds[i].owner, diff);
+            emit Returned( s.microFunds[i].owner, diff, s.funds[_id].owner);
             }
         }
     }
+    
+    function multiCall(address[] memory _targets, bytes[] memory _data) public {
+        require(_targets.length == _data.length, "Length mismatch");
+        for (uint256 i = 0; i < _targets.length; i++) {
+            (bool success, ) = _targets[i].call(_data[i]);
+            require(success, "MultiCall failed");
+        }
+    }
+    
 
     /// @notice Charge rewards during contribution process
     function rewardCharge(uint256 _rewardId) internal {
