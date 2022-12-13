@@ -212,6 +212,12 @@ describe("Funding", async function () {
     // Calling Distribution with new Multicall - testing specific distributeUni() internal function
     await masterFacet.distribute(testId); 
 
+    // Claiming microfunds one by one
+    await masterFacet.connect(user1).claimMicro(1, user1.address);
+    await masterFacet.connect(user1).claimMicro(2, user2.address);
+    await masterFacet.connect(user1).claimMicro(3, user3.address);
+    await masterFacet.connect(user1).claimMicro(4, user4.address);
+
     // Retrieve balances of all users
     const balMaster = await donationToken.balanceOf(masterFacet.address);
     const balCreator = await donationToken.balanceOf(creator.address);
@@ -219,6 +225,8 @@ describe("Funding", async function () {
     const balUser2 = await donationToken.balanceOf(user2.address);
     const balUser3 = await donationToken.balanceOf(user3.address);
     const balUser4 = await donationToken.balanceOf(user4.address);
+
+
 
     console.log(balCreator, balUser1, balUser2, balUser3, balUser4);
     // No token should be left in the contract
