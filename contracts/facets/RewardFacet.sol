@@ -19,6 +19,9 @@ contract RewardFacet is Modifiers {
         uint256 rewardType
     );
 
+    event TokenReward(address backer, uint256 amount, uint256 fundId);
+    event NftReward(address backer, address contractAddress, uint256 fundId);
+
     ///@notice Lock tokens as crowdfunding reward - ERC20/ERC1155
     ///@notice One project could have multiple rewards
     function createReward(
@@ -98,6 +101,87 @@ contract RewardFacet is Modifiers {
         );
     }
 
+    ///@notice - Separated function  from MasterFacet -> distribute() 
+    ///@notice - Distribute rewards to backers
+    function distributeRewards(uint256 _id) public{
+        LibDiamond.enforceIsContractOwner();
+        for (uint256 i = 0; i < s.rewards.length; i++) {
+            IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
+            IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
+            if (s.rewards[i].fundId == _id && s.rewards[i].state != 3) {
+                s.rewards[i].state = 3;
+                for (uint256 j = 0; j < s.rewardList.length; j++) {
+                    ///@notice - Check NFT rewards
+                    if (
+                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
+                        s.rewards[i].state == 1
+                    ) {
+                        rewardNft.setApprovalForAll(
+                            s.rewardList[i].receiver,
+                            true
+                        );
+                        rewardNft.safeTransferFrom(
+                            address(this),
+                            s.rewardList[j].receiver,
+                            s.rewards[i].nftId,
+                            1,
+                            ""
+                        );
+                        emit NftReward(
+                            s.rewardList[j].receiver,
+                            s.rewards[i].contractAddress,
+                            s.rewards[i].fundId
+                        );
+                    }
+                    ///@notice - Check ERC20 rewards
+                    else if (
+                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
+                        s.rewards[i].state == 2
+                    ) {
+                        rewardToken.approve(
+                            s.rewardList[i].receiver,
+                            s.rewards[i].erc20amount
+                        );
+                        rewardToken.transferFrom(
+                            address(this),
+                            s.rewardList[j].receiver,
+                            s.rewards[i].erc20amount
+                        );
+                        emit TokenReward(
+                            s.rewardList[j].receiver,
+                            s.rewards[i].erc20amount,
+                            s.rewards[i].fundId
+                        );
+                    }
+                }
+                if (s.rewards[i].totalNumber > s.rewards[i].actualNumber) {
+                    uint256 rewardsDiff = s.rewards[i].totalNumber -
+                        s.rewards[i].actualNumber;
+                    if (s.rewards[i].state == 1) {
+                        rewardNft.setApprovalForAll(s.rewards[i].owner, true);
+                        rewardNft.safeTransferFrom(
+                            address(this),
+                            s.rewards[i].owner,
+                            s.rewards[i].nftId,
+                            rewardsDiff,
+                            ""
+                        );
+                    } else if (s.rewards[i].state == 2) {
+                        rewardToken.approve(
+                            s.rewards[i].owner,
+                            s.rewards[i].erc20amount
+                        );
+                        rewardToken.transferFrom(
+                            address(this),
+                            s.rewards[i].owner,
+                            (s.rewards[i].erc20amount /
+                                s.rewards[i].totalNumber) * rewardsDiff
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     // Saving space -> will be implemented after diamond
     // function batchDistribute(IERC20 _rewardTokenAddress) public onlyOwner nonReentrant {
