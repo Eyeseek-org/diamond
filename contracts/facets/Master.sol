@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../Errors.sol";
+import "./RewardFacet.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "hardhat/console.sol";
@@ -325,10 +326,9 @@ contract MasterFacet  {
         return totalDrained;
     }
 
-        ///@notice - Checks balances for each supported currency and returns funds back to the users
+    ///@notice - Checks balances for each supported currency and returns funds back to the users
     ///@dev 0=Canceled, 1=Active, 2=Finished
     function cancelFund(uint256 _id) public {
-        // TBD reentrancy
         LibDiamond.enforceIsContractOwner();
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         s.funds[_id].state = 0;
