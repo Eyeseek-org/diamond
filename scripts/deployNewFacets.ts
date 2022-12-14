@@ -1,7 +1,7 @@
 import { run, network, ethers } from "hardhat";
 
 // List of facet contract names
-const FACET_NAMES: string[] = [];
+const FACET_NAMES: string[] = ["FundFacet", "RewardFacet", "MasterFacet"];
 
 const deploy = async (facetNames: string[]) => {
   const addresses = [];
@@ -11,14 +11,14 @@ const deploy = async (facetNames: string[]) => {
     await facet.deployed();
     addresses.push(facet.address);
     console.log(`${FacetName} deployed: ${facet.address}`);
-    if (network.name !== "hardhat") {
-      console.log(`Verifing ${FacetName} Contract ...`);
-      await run("verify:verify", {
-        address: FacetName,
-        constructorArguments: [],
-      });
-      console.log(`Verified ${FacetName}`);
-    }
+    // if (network.name !== "hardhat") {
+    //   console.log(`Verifing ${FacetName} Contract ...`);
+    //   await run("verify:verify", {
+    //     address: FacetName,
+    //     constructorArguments: [],
+    //   });
+    //   console.log(`Verified ${FacetName}`);
+    // }
   }
   console.log("Done");
 };

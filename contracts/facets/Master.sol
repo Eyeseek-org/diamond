@@ -22,6 +22,8 @@ contract MasterFacet  {
     event NftReward(address backer, address contractAddress, uint256 fundId);
     event DistributionAccomplished(address owner,uint256 balance,uint256 currency,uint256 fee);
     event Refunded(address backer, uint256 amount, uint256 fundId);
+    event RewardCharged(address owner, uint256 rewardId, uint256 amount);
+    event RewardNotCharged(address owner, uint256 rewardId);
 
     /// @notice Use modifiers to check when deadline is passed
     modifier isDeadlinePassed(uint256 _id) {
@@ -64,6 +66,7 @@ contract MasterFacet  {
         );
     }
 
+/// Prozium + Validace částky 
     /// @notice Function to donate to a project
     function contribute(
         uint256 _amountM,
@@ -121,17 +124,10 @@ contract MasterFacet  {
                 })
             );
             s.funds[_id].micros += 1;
-            emit MicroCreated(
-                msg.sender,
-                _amountM,
-                _id,
-                _currency,
-                s.microFunds.length
-            );
+            emit MicroCreated( msg.sender, _amountM, _id, _currency, s.microFunds.length);
         }
         s.funds[_id].balance += _amountD;
-        rewardCharge(_rewardId);
-        
+        rewardCharge(_rewardId, _amountM + _amountD);
     }
 
         /// @notice Distributes resources to the owner upon successful funding campaign
@@ -198,7 +194,8 @@ contract MasterFacet  {
     
 
     /// @notice Internal function activated if there are leftovers in deployed microfunds
-    function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) internal {
+    function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) public {
+        LibDiamond.enforceIsContractOwner();
         for (uint256 i = 0; i < s.microFunds.length; i++) {
         if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
             s.microFunds[i].state = 2; ///@dev closing the microfunds
@@ -211,37 +208,30 @@ contract MasterFacet  {
         }
     }
     
-    function multiCall(address[] memory _targets, bytes[] memory _data) public {
-        require(_targets.length == _data.length, "Length mismatch");
-        for (uint256 i = 0; i < _targets.length; i++) {
-            (bool success, ) = _targets[i].call(_data[i]);
-            require(success, "MultiCall failed");
-        }
-    }
-    
 
     /// @notice Charge rewards during contribution process
-    function rewardCharge(uint256 _rewardId) internal {
+    function rewardCharge(uint256 _rewardId, uint256 _charged) internal {
         if (s.rewards[_rewardId].state == 5) revert FundInactive(_rewardId);
-        if (
-            s.rewards[_rewardId].actualNumber >
-            s.rewards[_rewardId].totalNumber
-        ) revert RewardFull(_rewardId);
-        s.rewards[_rewardId].actualNumber += 1;
-        s.rewardList.push(
-            Reward({
-                rewardItemId: s.rewardList.length,
-                rewardId: s.rewards[_rewardId].rewardId,
-                receiver: msg.sender,
-                state: 1
-            })
-        );
-        if (
-            s.rewards[_rewardId].actualNumber ==
-            s.rewards[_rewardId].totalNumber
-        ) {
-            s.rewards[_rewardId].state = 5; ///@dev Reward list is full
+        if ( s.rewards[_rewardId].actualNumber >= s.rewards[_rewardId].totalNumber ) revert RewardFull(_rewardId);
+        if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount == _charged ){
+            s.rewards[_rewardId].actualNumber += 1;
+            s.rewardList.push(
+                Reward({
+                    rewardItemId: s.rewardList.length,
+                    rewardId: s.rewards[_rewardId].rewardId,
+                    receiver: msg.sender,
+                    state: 1
+                })
+            );
+            if (s.rewards[_rewardId].actualNumber == s.rewards[_rewardId].totalNumber) 
+            {
+                s.rewards[_rewardId].state = 5; ///@dev Reward list is full
+            }
+            emit RewardCharged(msg.sender, _rewardId, _charged);
+        } else {
+            emit RewardNotCharged(msg.sender, _rewardId);
         }
+
     }
 
     /// @notice If microfunds are deployed on project, contribution function will drain them

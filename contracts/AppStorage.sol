@@ -18,6 +18,15 @@ struct Fund {
     uint256 backerNumber;
 }
 
+struct Stream {
+    uint256 id;
+    uint256 fundId;
+    address backer;
+    uint256 amount;
+    uint256 state; ///@dev 0=Donated, 1=Distributed, 2=Refunded
+    uint256 currency; ///@notice 0=Eye, 1=USDC, 2=USDT, 3=DAI(descoped)
+}
+
 /// @notice Unlimited amount of microfunds could be connect with a main fund
 struct MicroFund {
     uint256 microId;

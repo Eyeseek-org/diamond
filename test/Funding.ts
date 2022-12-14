@@ -22,10 +22,10 @@ describe("Funding", async function () {
   // let rewardFacet: RewardFacet;
   let masterFacet: MasterFacet;
   let rewardFacet: RewardFacet;
-
   let donationToken: Token;
   let usdtToken: Token;
   let usdcToken: Token;
+  let funnyToken: Token;
 
   before(async function () {
     // ## Setup Donation Token
@@ -34,6 +34,10 @@ describe("Funding", async function () {
 
     const Usdc = await ethers.getContractFactory("Token");
     usdcToken = await Usdc.deploy();
+
+
+    const Funny = await ethers.getContractFactory("Token");
+    funnyToken = await Funny.deploy();
 
     // ## Setup Diamond
 
@@ -92,15 +96,9 @@ describe("Funding", async function () {
     const fundAmount = 500;
     const testId = 1;
     const bUserBefore = await donationToken.balanceOf(user.address);
-    await donationToken.approve(diamondAddress, 4 * fundAmount, {
-      from: user.address,
-    });
-    await masterFacet.contribute(0, fundAmount, testId, 1, 0, {
-      from: user.address,
-    });
-    await masterFacet.contribute(fundAmount, fundAmount, testId, 1, 0, {
-      from: user.address,
-    });
+    await donationToken.approve(diamondAddress, 4 * fundAmount, {from: user.address});
+    await masterFacet.contribute(0, fundAmount, testId, 1, 0, {from: user.address});
+    await masterFacet.contribute(fundAmount, fundAmount, testId, 1, 0, {from: user.address});
 
     //---------- Calculate stats before distribute
 
@@ -154,20 +152,9 @@ describe("Funding", async function () {
     await usdcToken.approve(diamondAddress, rewardAmount, {
       from: user.address,
     });
-    await rewardFacet.createReward(testId, 1, 1, usdcToken.address, 0, {
-      from: user.address,
-    });
-    await rewardFacet.createReward(
-      testId,
-      1,
-      rewardAmount,
-      usdcToken.address,
-      1,
-      { from: user.address }
-    );
 
     // Charge reward with contribution
-    await masterFacet.contribute(0, fundAmount, testId, 1, 2, {
+    await masterFacet.contribute(0, fundAmount, testId, 1, 0, {
       from: user.address,
     });
     // Charge reward error
@@ -191,10 +178,10 @@ describe("Funding", async function () {
     await donationToken.connect(bank).transfer(user2.address, 11);
     await donationToken.connect(bank).transfer(user3.address, 11);
     await donationToken.connect(bank).transfer(user4.address, 11);
-    await donationToken.connect(user1).approve(masterFacet.address, 11);
-    await donationToken.connect(user2).approve(masterFacet.address, 11);
-    await donationToken.connect(user3).approve(masterFacet.address, 11);
-    await donationToken.connect(user4).approve(masterFacet.address, 11);
+    await donationToken.connect(user1).approve(diamondAddress, 11);
+    await donationToken.connect(user2).approve(diamondAddress, 11);
+    await donationToken.connect(user3).approve(diamondAddress, 11);
+    await donationToken.connect(user4).approve(diamondAddress, 11);
     const donationAmount = 1;
     const microfundAmount = 10;
     const testId = 3;
@@ -219,16 +206,13 @@ describe("Funding", async function () {
     await masterFacet.connect(user1).claimMicro(4, user4.address);
 
     // Retrieve balances of all users
-    const balMaster = await donationToken.balanceOf(masterFacet.address);
+    const balMaster = await donationToken.balanceOf(diamondAddress);
     const balCreator = await donationToken.balanceOf(creator.address);
     const balUser1 = await donationToken.balanceOf(user1.address);
     const balUser2 = await donationToken.balanceOf(user2.address);
     const balUser3 = await donationToken.balanceOf(user3.address);
     const balUser4 = await donationToken.balanceOf(user4.address);
 
-
-
-    console.log(balCreator, balUser1, balUser2, balUser3, balUser4);
     // No token should be left in the contract
     expect(balMaster).to.equal(0);
     // User 1 should have 4 tokens less then before the contribution
@@ -242,4 +226,41 @@ describe("Funding", async function () {
     // Creator should collect donations and drained microfunds
     expect(balCreator).to.equal(10)
   });
+  it("Verifies reward movements", async function(){
+    const [bank, user, creator] = await ethers.getSigners();
+    const donationAmount = 10;
+    const testId = 4;
+    fundFacet.connect(creator).createFund(1000);
+    // ---------------- Test data setup
+    await donationToken.connect(bank).transfer(user.address, 50);
+    await usdcToken.connect(bank).transfer(user.address, 50);
+    await donationToken.connect(bank).transfer(creator.address, 42);
+    await funnyToken.connect(bank).transfer(creator.address, 50);
+    await usdcToken.connect(user).approve(diamondAddress, 500);
+    await donationToken.connect(user).approve(diamondAddress, 500);
+
+    // ---------------- Reward generation - all three types
+    await funnyToken.connect(creator).approve(diamondAddress, 20)
+    await rewardFacet.connect(creator).createReward(testId, 2, 10, funnyToken.address, 0)
+    await rewardFacet.connect(creator).createReward(testId, 2, 10, funnyToken.address, 1)
+    await masterFacet.connect(user).contribute(0, donationAmount, testId, 2, 1);
+    await masterFacet.connect(user).contribute(0, donationAmount, testId, 2, 2);
+
+    // ---------------- Reward distribution (funnyToken ERC20)
+    await masterFacet.distribute(testId);
+    await rewardFacet.distributeFundRewards(testId)
+
+    // ---------------- Reward balances 
+    //-- Creator spent 20 tokens, 10 was returned for unclaimed ERC20
+    //-- User receives 10 tokens for 1 claimable erc20 reward
+    //-- Diamond has 0 tokens, all is claimed or returned back
+    const balRewardCreator = await funnyToken.balanceOf(creator.address);
+    const balRewDiamond = await funnyToken.balanceOf(diamondAddress);
+    const balRewUser = await funnyToken.balanceOf(user.address);
+
+    expect(balRewardCreator).to.equal(40)
+    expect(balRewUser).to.equal(10)
+    expect(balRewDiamond).to.equal(0)
+
+  })
 });
