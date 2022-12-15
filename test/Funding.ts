@@ -12,14 +12,10 @@ import {
 
 import { deployDiamond } from "../scripts/libraries/deploy";
 
-let user, creator, fund, cancelUser, receiver;
-
 describe("Funding", async function () {
   let diamondAddress: string;
   let diamondLoupeFacet: DiamondLoupeFacet;
-  // let ownershipFacet: OwnershipFacet;
   let fundFacet: FundFacet;
-  // let rewardFacet: RewardFacet;
   let masterFacet: MasterFacet;
   let rewardFacet: RewardFacet;
   let donationToken: Token;
@@ -49,22 +45,16 @@ describe("Funding", async function () {
     );
     diamondAddress = _diamondAddress;
 
-    diamondLoupeFacet = await ethers.getContractAt(
-      "DiamondLoupeFacet",
-      diamondAddress
-    );
+    diamondLoupeFacet = await ethers.getContractAt("DiamondLoupeFacet",diamondAddress);
     // ownershipFacet = await ethers.getContractAt(
     //   "OwnershipFacet",
     //   diamondAddress
-    // );
+    //
     fundFacet = await ethers.getContractAt("FundFacet", diamondAddress);
     // rewardFacet = await ethers.getContractAt("RewardFacet", diamondAddress);
     masterFacet = await ethers.getContractAt("MasterFacet", diamondAddress);
     rewardFacet = await ethers.getContractAt("RewardFacet", diamondAddress);
-    masterFacet.createZeroData();
-
-    // environment preparation, deploy token & staking contracts
-    const [user] = await ethers.getSigners();
+    await masterFacet.createZeroData();
 
     const Usdt = await ethers.getContractFactory("Token");
     usdtToken = await Usdt.deploy();
@@ -83,7 +73,7 @@ describe("Funding", async function () {
   });
 
   it("MasterFacet facet - contribute to fund with index 1 with no errors", async () => {
-    const [user, receiver] = await ethers.getSigners();
+    const [user] = await ethers.getSigners();
     fundFacet.createFund(1000, { from: user.address });
     await donationToken.approve(diamondAddress, 50, { from: user.address });
     // Contribute to 2nd fund (index 1)
@@ -262,5 +252,14 @@ describe("Funding", async function () {
     expect(balRewUser).to.equal(10)
     expect(balRewDiamond).to.equal(0)
 
+  })
+  it("Test getter exposure", async function(){
+      const [user] = await ethers.getSigners();
+      const fundDetail = await fundFacet.connect(user).getFundDetail(1);
+      const myMicrofunds = await fundFacet.connect(user).getMyMicrofunds();
+      const myDonations = await fundFacet.connect(user).getMyDonations();
+      expect(fundDetail).to.not.equal(null)
+      expect(myMicrofunds).to.not.equal(null)
+      expect(myDonations).to.not.equal(null)
   })
 });
