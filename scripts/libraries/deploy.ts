@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { getSelectors, FacetCutAction } from "./diamond";
 
 async function deployDiamond(
-  facetNames: string[] = ["MasterFacet", "FundFacet", "RewardFacet"],
+  facetNames: string[] = [],
   usdcAddress: string = ethers.constants.AddressZero,
   usdtAddress: string = ethers.constants.AddressZero
 ): Promise<[string, string[], any[]]> {

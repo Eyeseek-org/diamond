@@ -4,21 +4,21 @@ const verify = async () => {
   if (network.name !== "hardhat") {
     console.log("Verifying contract source on blockchain scan ...");
     await run("verify:verify", {
-      address: "0x1b5AEDC77D308E626791Eb9FFd9BDC83CB33A657",
+      address: "0x0Ae7A99b492B2064856e1b072fdeD6653785D7D9",
       constructorArguments: [],
     });
-    console.log("Verified Contract 1/3: FundFacet");
+    console.log("Verified Contract 1/3: MasterFacet");
 
     await run("verify:verify", {
-        address: "0x280ab3632BF734f8e3400841fFD1b4Aba864c89F",
+        address: "0xf2fFd482656BaF4f77A6EdA67dBb58Fbef85305A",
         constructorArguments: [],
       });
-    console.log("Verified Contract 2/3: RewardFacet");
+    console.log("Verified Contract 2/3: FundFacet");
     await run("verify:verify", {
-        address: "0xE2DdFA72681DDe1916ad379AD2Df1Ca853b69074",
+        address: "0x5C8f21F6Ac84BBd679F55eE0bfa158705084ff07",
         constructorArguments: [],
       });
-    console.log("Verified Contract 3/3: MasterFacet");
+    console.log("Verified Contract 3/3: RewardFacet");
     console.log("DONE VERIFICATION");
   }
 };

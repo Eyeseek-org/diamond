@@ -6,7 +6,6 @@ import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../Errors.sol";
 import "./RewardFacet.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "hardhat/console.sol";
 
@@ -362,5 +361,9 @@ contract MasterFacet is Modifiers {
                 );
             }
         }
+    }
+
+        function getFundDetail(uint256 _id) public view returns (Fund memory) {
+        return s.funds[_id];
     }
 }
