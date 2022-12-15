@@ -10,8 +10,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "hardhat/console.sol";
 
-contract MasterFacet  {
-    AppStorage internal s;
+contract MasterFacet is Modifiers {
 
     event MicroCreated(address owner,uint256 cap,uint256 fundId,uint256 currency,uint256 microId);
     event Donated(address donator,uint256 amount,uint256 fundId,uint256 currency,uint256 microDrained);
@@ -36,7 +35,6 @@ contract MasterFacet  {
     ///@notice Helper reward pool function to gather non-token related rewards
     ///@dev Need to create fake fund 0, with fake pool 0, otherwise contribution won't work universally
     function createZeroData() public {
-        LibDiamond.enforceIsContractOwner();
         s.funds.push(
             Fund({
                 owner: address(0),
@@ -74,7 +72,7 @@ contract MasterFacet  {
         uint256 _id,
         uint256 _currency,
         uint256 _rewardId
-    ) public isDeadlinePassed(_id) {
+    ) public  {
         /// @param _amountM - amount of tokens to be sent to microfund
         /// @param _amountD - amount of tokens to be direcly donated
         /// @notice User can create microfund and donate at the same time

@@ -40,13 +40,50 @@ contract FundFacet is Modifiers {
         emit FundCreated(s.funds.length);
     }
 
+    function getFundDetail(uint256 _id) public view returns (Fund memory) {
+        return s.funds[_id];
+    }
+
+    function getMyMicrofunds() public view returns (uint256[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < s.microFunds.length; i++) {
+            if (s.microFunds[i].owner == msg.sender) {
+                count++;
+            }
+        }
+        uint256[] memory microIds = new uint256[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < s.microFunds.length; i++) {
+            if (s.microFunds[i].owner == msg.sender) {
+                microIds[index] = s.microFunds[i].fundId;
+                index++;
+            }
+        }
+        return microIds;
+    }
+
+    function getMyDonations() public view returns (uint256[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < s.donations.length; i++) {
+            if (s.donations[i].backer == msg.sender) {
+                count++;
+            }
+        }
+        uint256[] memory donations = new uint256[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < s.donations.length; i++) {
+            if (s.donations[i].backer == msg.sender) {
+                donations[index] = s.donations[i].fundId;
+                index++;
+            }
+        }
+        return donations;
+    }
+
 
 
     /// @notice - Get total number of microfunds connected to the ID of fund
-    function getConnectedMicroFunds(uint256 _index)
-        public
-        view
-        returns (uint256)
+    function getConnectedMicroFunds(uint256 _index) public view returns (uint256)
     {
         uint256 count = 0;
         for (uint256 i = 0; i < s.microFunds.length; i++) {
@@ -95,26 +132,4 @@ contract FundFacet is Modifiers {
         }
         return microNumber;
     }
-
-    ///@notice list of backer addresses for specific fund
-    function getBackerAddresses(uint256 _id)
-        public
-        view
-        returns (address[] memory)
-    {
-        address[] memory backerAddresses;
-        uint256 b = s.funds[_id].backerNumber;
-
-        uint256 number = 0;
-        for (uint256 i = 0; i < b; i++) {
-            if (s.donations[i].fundId == _id) {
-                backerAddresses[number] = s.donations[i].backer;
-                number++;
-            }
-        }
-        unchecked {
-            return backerAddresses;
-        }
-    }
-
 }

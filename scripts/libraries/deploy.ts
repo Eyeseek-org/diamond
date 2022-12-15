@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { getSelectors, FacetCutAction } from "./diamond";
 
 async function deployDiamond(
-  facetNames: string[] = [],
+  facetNames: string[] = ["MasterFacet", "FundFacet", "RewardFacet"],
   usdcAddress: string = ethers.constants.AddressZero,
   usdtAddress: string = ethers.constants.AddressZero
 ): Promise<[string, string[], any[]]> {
@@ -16,10 +16,8 @@ async function deployDiamond(
   const DiamondInit = await ethers.getContractFactory("DiamondInit");
   const diamondInit = await DiamondInit.deploy();
   await diamondInit.deployed();
-  console.log("DiamondInit deployed:", diamondInit.address);
 
   // Deploy facets and set the `facetCuts` variable
-  console.log("");
   console.log("Deploying facets");
   const FacetNames = [
     "DiamondCutFacet",

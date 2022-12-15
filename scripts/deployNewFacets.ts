@@ -1,7 +1,8 @@
 import { run, network, ethers } from "hardhat";
 
 // List of facet contract names
-const FACET_NAMES: string[] = ["FundFacet", "RewardFacet", "MasterFacet"];
+ const FACET_NAMES: string[] = ["MasterFacet","FundFacet", "RewardFacet" ];
+// const FACET_NAMES: string[] = ["FundFacet"];
 
 const deploy = async (facetNames: string[]) => {
   const addresses = [];
@@ -11,6 +12,11 @@ const deploy = async (facetNames: string[]) => {
     await facet.deployed();
     addresses.push(facet.address);
     console.log(`${FacetName} deployed: ${facet.address}`);
+
+    if (FacetName === "MasterFacet") {
+      await facet.createZeroData();
+      console.log("Zero data created")
+     }
     // if (network.name !== "hardhat") {
     //   console.log(`Verifing ${FacetName} Contract ...`);
     //   await run("verify:verify", {

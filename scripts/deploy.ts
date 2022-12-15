@@ -48,6 +48,7 @@ const deploy = async () => {
       constructorArguments: diamondConstructorArgs,
     });
     console.log("Verified Contract 4/4: Funds Diamond");
+    
     console.log("DONE VERIFICATION");
   }
 };
