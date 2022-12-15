@@ -18,39 +18,39 @@ const USDT_ADDRESS = "0xce754458108142F620d78604a1ea892212f3DC94";
 
 const deploy = async () => {
   const [address, facetAddresses, diamondConstructorArgs] = await deployDiamond(
-    ["MasterFacet","FundFacet","RewardFacet"],
+    ["FundFacet","RewardFacet","MasterFacet"],
     USDC_ADDRESS,
     USDT_ADDRESS
   );
   console.log("Diamond Deployed at:", address);
-3
-  if (network.name !== "hardhat") {
-    console.log("Verifying contract source on Etherscan ...");
 
-    await run("verify:verify", {
-      address: facetAddresses[0],
-      constructorArguments: [],
-    });
-    console.log("Verified Contract 1/4: DiamondCutFacet");
-    await run("verify:verify", {
-      address: facetAddresses[1],
-      constructorArguments: [],
-    });
-    console.log("Verified Contract 2/4: DiamondLoupeFacet");
-    await run("verify:verify", {
-      address: facetAddresses[2],
-      constructorArguments: [],
-    });
-    console.log("Verified Contract 3/4: OwnershipFacet");
+  // if (network.name !== "hardhat") {
+  //   console.log("Verifying contract source on Etherscan ...");
 
-    await run("verify:verify", {
-      address,
-      constructorArguments: diamondConstructorArgs,
-    });
-    console.log("Verified Contract 4/4: Funds Diamond");
+  //   await run("verify:verify", {
+  //     address: facetAddresses[0],
+  //     constructorArguments: [],
+  //   });
+  //   console.log("Verified Contract 1/4: DiamondCutFacet");
+  //   await run("verify:verify", {
+  //     address: facetAddresses[1],
+  //     constructorArguments: [],
+  //   });
+  //   console.log("Verified Contract 2/4: DiamondLoupeFacet");
+  //   await run("verify:verify", {
+  //     address: facetAddresses[2],
+  //     constructorArguments: [],
+  //   });
+  //   console.log("Verified Contract 3/4: OwnershipFacet");
+
+  //   await run("verify:verify", {
+  //     address,
+  //     constructorArguments: diamondConstructorArgs,
+  //   });
+  //   console.log("Verified Contract 4/4: Funds Diamond");
     
-    console.log("DONE VERIFICATION");
-  }
+  //   console.log("DONE VERIFICATION");
+  // }
 };
 
 if (require.main === module) {

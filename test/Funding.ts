@@ -190,10 +190,10 @@ describe("Funding", async function () {
     await masterFacet.distribute(testId); 
 
     // Claiming microfunds one by one
-    await masterFacet.connect(user1).claimMicro(1, user1.address);
-    await masterFacet.connect(user1).claimMicro(2, user2.address);
-    await masterFacet.connect(user1).claimMicro(3, user3.address);
-    await masterFacet.connect(user1).claimMicro(4, user4.address);
+    await fundFacet.connect(user1).claimMicro(1, user1.address);
+    await fundFacet.connect(user1).claimMicro(2, user2.address);
+    await fundFacet.connect(user1).claimMicro(3, user3.address);
+    await fundFacet.connect(user1).claimMicro(4, user4.address);
 
     // Retrieve balances of all users
     const balMaster = await donationToken.balanceOf(diamondAddress);
