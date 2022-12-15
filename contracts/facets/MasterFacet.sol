@@ -165,29 +165,10 @@ contract MasterFacet is Modifiers {
             _currency,
             fee
         );
-        /// @notice Resources are returned back to the microfunds
+        /// @notice Resources are returned back to the c
         // returnMicrofunds(_id, _currency, _token);
     }
 
-    ///@notice - Single function to claim microfund leftovers separately
-    /// TBD only after deadline
-    function claimMicro(uint256 _id, address _add) public {
-        if (s.microFunds[_id].state != 1) revert FundInactive(_id);
-        if (s.microFunds[_id].cap == s.microFunds[_id].microBalance) revert LowBalance(s.microFunds[_id].microBalance);
-        if (s.microFunds[_id].owner != _add) revert InvalidAddress(s.microFunds[_id].owner);
-        s.microFunds[_id].state = 2; ///@dev closing the microfunds
-        uint256 diff = s.microFunds[_id].cap - s.microFunds[_id].microBalance;
-        uint256 fundId = s.microFunds[_id].fundId;
-        if (s.microFunds[_id].currency == 1){
-            s.usdc.approve(address(this), diff);   
-            s.usdc.transferFrom( address(this), s.microFunds[_id].owner, diff);
-        } else if (s.microFunds[_id].currency == 2){
-            s.usdt.approve(address(this), diff);   
-            s.usdt.transferFrom( address(this), s.microFunds[_id].owner, diff);
-        }
-        s.microFunds[_id].microBalance = 0; ///@dev resets the microfund
-        emit Returned( s.microFunds[_id].owner, diff, s.funds[fundId].owner );
-    }
     
 
     /// @notice Internal function activated if there are leftovers in deployed microfunds
@@ -361,9 +342,5 @@ contract MasterFacet is Modifiers {
                 );
             }
         }
-    }
-
-        function getFundDetail(uint256 _id) public view returns (Fund memory) {
-        return s.funds[_id];
     }
 }
