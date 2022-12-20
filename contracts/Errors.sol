@@ -8,4 +8,5 @@ error InvalidAddress(address addr);
 error RewardFull(uint256 rewardId);
 error LowBalance(uint256 balance);
 error Deadline(bool deadline);
+error InvalidRewardType(uint256 state);
 

@@ -16,12 +16,14 @@ contract FundFacet is Modifiers {
     event Returned(address microOwner, uint256 balance, address fundOwner);
 
     /// @notice Main function to create crowdfunding project
-    function createFund(uint256 _level1) public {
+    function createFund(uint256 _level1, uint256 _days) public {
+        if (msg.sender == address(0)) revert InvalidAddress(msg.sender);
         /// @notice Create a new project to be funded
-        /// @param _currency - token address, fund could be created in any token, this will be also required for payments // For now always 0
-        /// @param _level1 - 1st (minimum) level of donation accomplishment, same works for all levels.
         uint256 _deadline = block.timestamp + 30 days;
-        /// if (msg.sender == address(0)) revert InvalidAddress(msg.sender);
+        /// @notice Let users pick between 1 and 90 days, if outside of range, set to 30 days
+        if (_days > 1 && _days < 90){
+            _deadline = block.timestamp + _days;
+        }
         if (_level1 < 0) revert InvalidAmount(_level1);
         s.funds.push(
             Fund({
