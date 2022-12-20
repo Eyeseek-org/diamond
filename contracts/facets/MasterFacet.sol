@@ -23,6 +23,7 @@ contract MasterFacet is Modifiers {
     event RewardCharged(address owner, uint256 rewardId, uint256 amount);
     event RewardNotCharged(address owner, uint256 rewardId);
 
+
     /// @notice Use modifiers to check when deadline is passed
     modifier isDeadlinePassed(uint256 _id) {
         if (block.timestamp > s.funds[_id].deadline) {
@@ -97,7 +98,7 @@ contract MasterFacet is Modifiers {
                     fundId: _id,
                     backer: msg.sender,
                     amount: _amountD,
-                    state: 0,
+                    state: 1,
                     currency: _currency /// TBD flexible in last stage
                 })
             );
@@ -151,11 +152,9 @@ contract MasterFacet is Modifiers {
         IERC20 _token
     ) internal {
         /// @notice Take fee to Eyeseek treasury
-        address feeAddress = 0xc21223249CA28397B4B6541dfFaEcC539BfF0c59; 
-        uint256 fee = (_fundBalance * 0) / 100; // Temporary 0% fee
+        uint256 fee = 0; // Temporary 0% fee
         uint256 gain = _fundBalance - fee;
         _token.approve(address(this), _fundBalance);
-        _token.transferFrom(address(this), feeAddress, fee);
         _token.transferFrom(address(this), s.funds[_id].owner, gain);
         _fundBalance -= gain;
         s.funds[_id].balance -= gain;
@@ -169,11 +168,13 @@ contract MasterFacet is Modifiers {
         // returnMicrofunds(_id, _currency, _token);
     }
 
-    
-
-    /// @notice Internal function activated if there are leftovers in deployed microfunds
+    /// @notice - Internal function activated if there are leftovers 
+    /// @notice - Working only in completed microfunds
+    /// @notice - Only in one currency, have to call twice for both
+    /// @dev - Admin function, only owner can call it after the fund distribution
     function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) public {
         LibDiamond.enforceIsContractOwner();
+        if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.microFunds.length; i++) {
         if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
             s.microFunds[i].state = 2; ///@dev closing the microfunds
@@ -186,10 +187,9 @@ contract MasterFacet is Modifiers {
         }
     }
     
-
     /// @notice Charge rewards during contribution process
     function rewardCharge(uint256 _rewardId, uint256 _charged) internal {
-        if (s.rewards[_rewardId].state == 5) revert FundInactive(_rewardId);
+        if ( s.rewards[_rewardId].state == 4) revert FundInactive(_rewardId);
         if ( s.rewards[_rewardId].actualNumber >= s.rewards[_rewardId].totalNumber ) revert RewardFull(_rewardId);
         if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount == _charged ){
             s.rewards[_rewardId].actualNumber += 1;
@@ -202,9 +202,6 @@ contract MasterFacet is Modifiers {
                 })
             );
             if (s.rewards[_rewardId].actualNumber == s.rewards[_rewardId].totalNumber) 
-            {
-                s.rewards[_rewardId].state = 5; ///@dev Reward list is full
-            }
             emit RewardCharged(msg.sender, _rewardId, _charged);
         } else {
             emit RewardNotCharged(msg.sender, _rewardId);
@@ -261,35 +258,9 @@ contract MasterFacet is Modifiers {
         if (s.funds[_id].usdtBalance > 0) {
             cancelUni(_id, s.funds[_id].usdtBalance, 2, s.usdt);
             s.funds[_id].usdtBalance = 0;
-        }
-     																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				            
-        for (uint256 i = 0; i < s.rewards.length; i++) {
-            if (s.rewards[i].fundId == _id && s.rewards[i].totalNumber > 0){
-                    if (s.rewards[i].state == 2 ) {
-                        ///@dev - Note frontend and contract use different states to identify type
-                        IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-                        rewardToken.approve(address(this), s.rewards[i].erc20amount);
-                        rewardToken.transferFrom(
-                            address(this),
-                            s.funds[_id].owner,
-                            s.rewards[i].erc20amount 
-                            );
-                        }
-                    else if (s.rewards[i].state == 1){
-                        IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
-                        rewardNft.setApprovalForAll(address(this), true);
-                        rewardNft.safeTransferFrom(
-                            address(this),
-                            s.funds[_id].owner,
-                            s.rewards[i].nftId,
-                            s.rewards[i].totalNumber,
-                            ""
-                        );
-                    } 
-                }  
-            }  
+        }																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				        
     }
-        ///@notice - Cancel the fund and return the resources to the microfunds, universal for all supported currencies
+    ///@notice - Cancel the fund and return the resources to the microfunds, universal for all supported currencies
     function cancelUni(
         uint256 _id,
         uint256 _fundBalance,
@@ -299,13 +270,14 @@ contract MasterFacet is Modifiers {
         for (uint256 i = 0; i < s.microFunds.length; i++) {
             if (
                 s.microFunds[i].fundId == _id &&
-                s.microFunds[i].currency == _currency 
+                s.microFunds[i].currency == _currency &&
+                s.microFunds[i].state == 1
             ) {
-                /// @notice Send back the remaining amount to the microfund owner
-                    s.microFunds[i].state = 4;
+                ///@notice Send back the remaining amount to the microfund owner
+                    s.microFunds[i].state = 0;
                     s.funds[_id].balance -= s.microFunds[i].microBalance;
                     _fundBalance -= s.microFunds[i].microBalance;
-                    _token.approve(address(this), s.microFunds[i].cap);
+                    _token.approve(s.microFunds[i].owner, s.microFunds[i].cap);
                     _token.transferFrom(
                         address(this),
                         s.microFunds[i].owner,
@@ -323,12 +295,12 @@ contract MasterFacet is Modifiers {
         for (uint256 i = 0; i < s.donations.length; i++) {
             if (
                 s.donations[i].fundId == _id &&
-                s.donations[i].state == 0 &&
+                s.donations[i].state == 1 &&
                 s.donations[i].currency == _currency
             ) {
+                s.donations[i].state = 0;
                 s.funds[_id].balance -= s.donations[i].amount;
                 _fundBalance -= s.donations[i].amount;
-                s.donations[i].state = 4;
                 _token.approve(address(this), s.donations[i].amount);
                 _token.transferFrom(
                     address(this),

@@ -74,7 +74,7 @@ describe("Funding", async function () {
 
   it("MasterFacet facet - contribute to fund with index 1 with no errors", async () => {
     const [user] = await ethers.getSigners();
-    fundFacet.createFund(1000, { from: user.address });
+    fundFacet.createFund(1000, 30, { from: user.address });
     await donationToken.approve(diamondAddress, 50, { from: user.address });
     // Contribute to 2nd fund (index 1)
     await masterFacet.contribute(0, 50, 1, 0, 0);
@@ -82,7 +82,7 @@ describe("Funding", async function () {
 
   it("Basic e2e - Create fund, contribute and check balances", async function () {
     const [user, receiver] = await ethers.getSigners();
-    fundFacet.createFund(1000, { from: receiver.address });
+    fundFacet.createFund(1000, 30, { from: receiver.address });
     const fundAmount = 500;
     const testId = 1;
     const bUserBefore = await donationToken.balanceOf(user.address);
@@ -129,7 +129,7 @@ describe("Funding", async function () {
     const fundAmount = 500;
     const rewardAmount = 100;
     const testId = 2;
-    fundFacet.createFund(1000);
+    fundFacet.createFund(1000, 30);
 
     const bUserBefore = await donationToken.balanceOf(user.address);
     await donationToken.approve(diamondAddress, 3 * fundAmount, {
@@ -175,7 +175,7 @@ describe("Funding", async function () {
     const donationAmount = 1;
     const microfundAmount = 10;
     const testId = 3;
-    fundFacet.connect(creator).createFund(100);
+    fundFacet.connect(creator).createFund(100, 30);
     // ---------------- Contribution from all users
     // Execute same contribution from 4x different users, contribution "donationToken"
 
@@ -220,7 +220,7 @@ describe("Funding", async function () {
     const [bank, user, creator] = await ethers.getSigners();
     const donationAmount = 10;
     const testId = 4;
-    fundFacet.connect(creator).createFund(1000);
+    fundFacet.connect(creator).createFund(1000, 30);
     // ---------------- Test data setup
     await donationToken.connect(bank).transfer(user.address, 50);
     await usdcToken.connect(bank).transfer(user.address, 50);
@@ -238,7 +238,7 @@ describe("Funding", async function () {
 
     // ---------------- Reward distribution (funnyToken ERC20)
     await masterFacet.distribute(testId);
-    await rewardFacet.distributeFundRewards(testId)
+    await rewardFacet.connect(creator).distributeFundRewards(testId)
 
     // ---------------- Reward balances 
     //-- Creator spent 20 tokens, 10 was returned for unclaimed ERC20
@@ -261,5 +261,50 @@ describe("Funding", async function () {
       expect(fundDetail).to.not.equal(null)
       expect(myMicrofunds).to.not.equal(null)
       expect(myDonations).to.not.equal(null)
+  })
+  it("Test cancel fund with rewards", async function(){
+    const [bank, user, creator] = await ethers.getSigners();
+    const testId = 5;
+    fundFacet.connect(creator).createFund(1000, 30);
+    const balBefore = await funnyToken.balanceOf(creator.address);
+
+    await funnyToken.connect(creator).approve(diamondAddress, 40)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+
+    await masterFacet.connect(user).contribute(0, 10, testId, 1, 4);
+
+    await masterFacet.cancelFund(testId);
+    await rewardFacet.returnRewards(testId);
+
+    const balAfter = await funnyToken.balanceOf(creator.address);
+    expect(balBefore).to.equal(balAfter)
+
+  })
+  it("Test distribute fund with claimed rewards", async function(){
+    const [bank, user, creator] = await ethers.getSigners();
+    const testId = 6;
+    fundFacet.connect(creator).createFund(1000, 30);
+    const balBefore = await funnyToken.balanceOf(creator.address);
+
+    await funnyToken.connect(creator).approve(diamondAddress, 40)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+    // Create reward with ID = 7
+    await masterFacet.connect(user).contribute(0, 10, testId, 1, 7);
+
+    await masterFacet.distribute(testId);
+    //@param - fundId ID of the fund = testId
+    //@param - user address of the target, caller could be anyone
+    //@param - rewardId item ID from the reward pool
+    //@param - reward pool ID created in previous step
+    await rewardFacet.claimRewards(testId, user.address, 1, 7);
+
+    const balAfter = await funnyToken.balanceOf(creator.address);
+    expect(balBefore).not.to.equal(balAfter)
+    const balContract = await funnyToken.balanceOf(diamondAddress);
+    expect(balContract).to.equal(0)
+
   })
 });
