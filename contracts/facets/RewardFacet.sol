@@ -122,7 +122,7 @@ contract RewardFacet is Modifiers {
         }
     }
 
-    function getRewards (uint256 _fundId) public view returns (RewardPool[] memory) {
+    function getFundRewards (uint256 _fundId) public view returns (RewardPool[] memory) {
         RewardPool[] memory rewards = new RewardPool[](s.rewards.length);
         uint256 counter = 0;
         for (uint256 i = 0; i < s.rewards.length; i++) {
@@ -134,6 +134,29 @@ contract RewardFacet is Modifiers {
         return rewards;
     }
 
+    function getPoolRewards (uint256 _rewId) public view returns (Reward[] memory) {
+        Reward[] memory rewards = new Reward[](s.rewardList.length);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < s.rewardList.length; i++) {
+            if (s.rewardList[i].rewardId == _rewId) {
+                rewards[counter] = s.rewardList[i];
+                counter++;
+            }
+        }
+        return rewards;
+    }
+
+    function getRewardItems () public view returns (Reward[] memory) {
+        Reward[] memory rewards = new Reward[](s.rewardList.length);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < s.rewardList.length; i++) {
+                rewards[counter] = s.rewardList[i];
+                counter++;
+        }
+        return rewards;
+    }
+
+
     ///@notice - Return fund rewards to the owner from closed fund 
     ///@notice - Could be called by anyone as it does not provide any financial benefit to the caller
     ///@notice - Because of that expected to be called mainly by the contract owner 
@@ -144,7 +167,7 @@ contract RewardFacet is Modifiers {
                     if (s.rewards[i].state == 2 ) {
                         ///@dev - Note frontend and contract use different states to identify type
                         IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-                        rewardToken.approve(address(this), s.rewards[i].erc20amount);
+                        rewardToken.approve(address(this), s.rewards[i].erc20amount * s.rewards[i].totalNumber);
                         rewardToken.transferFrom(
                             address(this),
                             s.rewards[i].owner,
@@ -167,12 +190,9 @@ contract RewardFacet is Modifiers {
             }  
     }
 
-    // Claimed counter zavést
-    // Descope reward under feature flag 
 
     ///@notice - Separated function  from MasterFacet -> distribute() 
     ///@notice - Distribute rewards to backers
-    // TBD fund has to be accomplished
     function distributeFundRewards(uint256 _id) public{
         if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.rewards.length; i++) {

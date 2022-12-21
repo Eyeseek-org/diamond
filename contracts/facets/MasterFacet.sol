@@ -20,8 +20,8 @@ contract MasterFacet is Modifiers {
     event NftReward(address backer, address contractAddress, uint256 fundId);
     event DistributionAccomplished(address owner,uint256 balance,uint256 currency,uint256 fee);
     event Refunded(address backer, uint256 amount, uint256 fundId);
-    event RewardCharged(address owner, uint256 rewardId, uint256 amount);
-    event RewardNotCharged(address owner, uint256 rewardId);
+    event RewardCharged(uint256 _id, address owner, uint256 rewardId, uint256 amount);
+    event RewardNotCharged(uint256 _id, address owner, uint256 rewardId);
 
 
     /// @notice Use modifiers to check when deadline is passed
@@ -125,7 +125,7 @@ contract MasterFacet is Modifiers {
             emit MicroCreated( msg.sender, _amountM, _id, _currency, s.microFunds.length);
         }
         s.funds[_id].balance += _amountD;
-        rewardCharge(_rewardId, _amountM + _amountD);
+        rewardCharge(_id, _rewardId, _amountM + _amountD);
     }
 
         /// @notice Distributes resources to the owner upon successful funding campaign
@@ -165,15 +165,12 @@ contract MasterFacet is Modifiers {
             fee
         );
         /// @notice Resources are returned back to the c
-        // returnMicrofunds(_id, _currency, _token);
+        returnMicrofunds(_id, _currency, _token);
     }
 
     /// @notice - Internal function activated if there are leftovers 
     /// @notice - Working only in completed microfunds
-    /// @notice - Only in one currency, have to call twice for both
-    /// @dev - Admin function, only owner can call it after the fund distribution
-    function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) public {
-        LibDiamond.enforceIsContractOwner();
+    function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) internal {
         if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.microFunds.length; i++) {
         if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
@@ -188,23 +185,24 @@ contract MasterFacet is Modifiers {
     }
     
     /// @notice Charge rewards during contribution process
-    function rewardCharge(uint256 _rewardId, uint256 _charged) internal {
+    function rewardCharge(uint256 _id, uint256 _rewardId, uint256 _charged) internal {
         if ( s.rewards[_rewardId].state == 4) revert FundInactive(_rewardId);
         if ( s.rewards[_rewardId].actualNumber >= s.rewards[_rewardId].totalNumber ) revert RewardFull(_rewardId);
         if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount == _charged ){
             s.rewards[_rewardId].actualNumber += 1;
             s.rewardList.push(
                 Reward({
+                    fundId: _id,
                     rewardItemId: s.rewardList.length,
-                    rewardId: s.rewards[_rewardId].rewardId,
+                    rewardId: _rewardId,
                     receiver: msg.sender,
                     state: 1
                 })
             );
             if (s.rewards[_rewardId].actualNumber == s.rewards[_rewardId].totalNumber) 
-            emit RewardCharged(msg.sender, _rewardId, _charged);
+            emit RewardCharged(_id, msg.sender, _rewardId, _charged);
         } else {
-            emit RewardNotCharged(msg.sender, _rewardId);
+            emit RewardNotCharged(_id, msg.sender, _rewardId);
         }
 
     }
@@ -271,13 +269,13 @@ contract MasterFacet is Modifiers {
             if (
                 s.microFunds[i].fundId == _id &&
                 s.microFunds[i].currency == _currency &&
-                s.microFunds[i].state == 1
+                s.microFunds[i].state <= 2
             ) {
                 ///@notice Send back the remaining amount to the microfund owner
                     s.microFunds[i].state = 0;
                     s.funds[_id].balance -= s.microFunds[i].microBalance;
                     _fundBalance -= s.microFunds[i].microBalance;
-                    _token.approve(s.microFunds[i].owner, s.microFunds[i].cap);
+                    _token.approve(address(this), s.microFunds[i].cap);
                     _token.transferFrom(
                         address(this),
                         s.microFunds[i].owner,
@@ -288,7 +286,6 @@ contract MasterFacet is Modifiers {
                         s.microFunds[i].cap,
                         s.funds[i].owner
                     );
-                
             }
         }
         ///@dev Fund states - 0=Created, 1=Distributed, 2=Refunded

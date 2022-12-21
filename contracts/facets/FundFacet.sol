@@ -44,78 +44,28 @@ contract FundFacet is Modifiers {
 
     
     ///@notice - Single function to claim microfund leftovers separately
-    /// TBD only after deadline
-    function claimMicro(uint256 _id, address _add) public {
-        if (s.microFunds[_id].state != 1) revert FundInactive(_id);
-        if (s.microFunds[_id].cap == s.microFunds[_id].microBalance) revert LowBalance(s.microFunds[_id].microBalance);
-        if (s.microFunds[_id].owner != _add) revert InvalidAddress(s.microFunds[_id].owner);
-        s.microFunds[_id].state = 2; ///@dev closing the microfunds
-        uint256 diff = s.microFunds[_id].cap - s.microFunds[_id].microBalance;
-        uint256 fundId = s.microFunds[_id].fundId;
-        if (s.microFunds[_id].currency == 1){
-            s.usdc.approve(address(this), diff);   
-            s.usdc.transferFrom( address(this), s.microFunds[_id].owner, diff);
-        } else if (s.microFunds[_id].currency == 2){
-            s.usdt.approve(address(this), diff);   
-            s.usdt.transferFrom( address(this), s.microFunds[_id].owner, diff);
-        }
-        s.microFunds[_id].microBalance = 0; ///@dev resets the microfund
-        emit Returned( s.microFunds[_id].owner, diff, s.funds[fundId].owner );
-    }
+    // function claimMicro(uint256 _id, address _add) public {
+    //     if (s.microFunds[_id].state != 1) revert FundInactive(_id);
+    //     if (s.microFunds[_id].cap == s.microFunds[_id].microBalance) revert LowBalance(s.microFunds[_id].microBalance);
+    //     if (s.microFunds[_id].owner != _add) revert InvalidAddress(s.microFunds[_id].owner);
+    //     s.microFunds[_id].state = 2; ///@dev closing the microfunds
+    //     uint256 diff = s.microFunds[_id].cap - s.microFunds[_id].microBalance;
+    //     uint256 fundId = s.microFunds[_id].fundId;
+    //     if (s.microFunds[_id].currency == 1){
+    //         s.usdc.approve(address(this), diff);   
+    //         s.usdc.transferFrom( address(this), s.microFunds[_id].owner, diff);
+    //     } else if (s.microFunds[_id].currency == 2){
+    //         s.usdt.approve(address(this), diff);   
+    //         s.usdt.transferFrom( address(this), s.microFunds[_id].owner, diff);
+    //     }
+    //     s.microFunds[_id].microBalance = 0; ///@dev resets the microfund
+    //     emit Returned( s.microFunds[_id].owner, diff, s.funds[fundId].owner );
+    // }
 
     function getFundDetail(uint256 _id) public view returns (Fund memory) {
         return s.funds[_id];
     }
 
-    function getMyMicrofunds() public view returns (uint256[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < s.microFunds.length; i++) {
-            if (s.microFunds[i].owner == msg.sender) {
-                count++;
-            }
-        }
-        uint256[] memory microIds = new uint256[](count);
-        uint256 index = 0;
-        for (uint256 i = 0; i < s.microFunds.length; i++) {
-            if (s.microFunds[i].owner == msg.sender) {
-                microIds[index] = s.microFunds[i].fundId;
-                index++;
-            }
-        }
-        return microIds;
-    }
-
-    function getMyDonations() public view returns (uint256[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < s.donations.length; i++) {
-            if (s.donations[i].backer == msg.sender) {
-                count++;
-            }
-        }
-        uint256[] memory donations = new uint256[](count);
-        uint256 index = 0;
-        for (uint256 i = 0; i < s.donations.length; i++) {
-            if (s.donations[i].backer == msg.sender) {
-                donations[index] = s.donations[i].fundId;
-                index++;
-            }
-        }
-        return donations;
-    }
-
-
-
-    /// @notice - Get total number of microfunds connected to the ID of fund
-    function getConnectedMicroFunds(uint256 _index) public view returns (uint256)
-    {
-        uint256 count = 0;
-        for (uint256 i = 0; i < s.microFunds.length; i++) {
-            if (s.microFunds[i].fundId == _index) {
-                count++;
-            }
-        }
-        return count;
-    }
 
     /// @notice - Calculate amounts of all involved microfunds in the donation
     function calcOutcome(uint256 _index, uint256 _amount)

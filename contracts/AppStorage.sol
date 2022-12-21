@@ -64,6 +64,7 @@ struct RewardPool {
 
 /// @dev Struct for Reward items connected with a reward pool
 struct Reward {
+    uint256 fundId;
     uint256 rewardId;
     uint256 rewardItemId;
     address receiver;
