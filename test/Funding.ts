@@ -254,9 +254,9 @@ describe("Funding", async function () {
 
     const rewItems = await rewardFacet.getRewardItems()
     const rewFund = await rewardFacet.getFundRewards(testId)
+    const rewPool = await rewardFacet.getPoolRewards(2)
 
-    console.log(rewItems)
-    await rewardFacet.connect(creator).returnRewards(testId);
+    await rewardFacet.returnRewards(testId);
 
     const balAfter = await funnyToken.balanceOf(creator.address);
     expect(balBefore).to.equal(balAfter)
