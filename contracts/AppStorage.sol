@@ -69,6 +69,7 @@ struct Reward {
     uint256 rewardItemId;
     address receiver;
     uint256 state; ///@dev 1=NFT active, 2=ERC20 Active, 3=Distributed 4=Canceled
+    uint256 charged;
 }
 
 struct AppStorage {

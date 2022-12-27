@@ -28,6 +28,12 @@ const deploy = async () => {
     console.log("Verifying contract source on Etherscan ...");
 
     await run("verify:verify", {
+      address,
+      constructorArguments: diamondConstructorArgs,
+    });
+    console.log("Verified Contract 4/4: Funds Diamond");
+
+    await run("verify:verify", {
       address: facetAddresses[0],
       constructorArguments: [],
     });
@@ -42,12 +48,6 @@ const deploy = async () => {
       constructorArguments: [],
     });
     console.log("Verified Contract 3/4: OwnershipFacet");
-
-    await run("verify:verify", {
-      address,
-      constructorArguments: diamondConstructorArgs,
-    });
-    console.log("Verified Contract 4/4: Funds Diamond");
     
     console.log("DONE VERIFICATION");
   }

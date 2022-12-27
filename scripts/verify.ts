@@ -2,28 +2,23 @@ import { run, network } from "hardhat";
 
 const verify = async () => {
   if (network.name !== "hardhat") {
-    console.log("Verifying contract source on blockchain scan ...");
-    await run("verify:verify", {
-      address: "0xEbA96A6656fe85CcEC62363C68887cd478940502",
+    console.log("Verifying contract source on blockchain scan ...");    await run("verify:verify", {
+      address: "0x1dfc6da91CD8c05F3401642061De296E8Be1F97D",
       constructorArguments: [],
     });
-    console.log("Verified Contract 1/4: MasterFacet");
+  console.log("Verified Contract 3/3: RewardFacet");
+    await run("verify:verify", {
+      address: "0x25A05fba4C20667f58dF58f88F07B7DF21a8CD43",
+      constructorArguments: [],
+    });
+    console.log("Verified Contract 1/3: MasterFacet");
 
     await run("verify:verify", {
-        address: "0xE120b4531ABc815C0A089db7D2063B1143b3f31d",
+        address: "0xCA71C35AEC44c877AdA9Fbc3e61Baf076523c023",
         constructorArguments: [],
       });
-    console.log("Verified Contract 2/4: FundFacet");
-    await run("verify:verify", {
-        address: "0x727EB56e55Dc188672B5d9Fe0F850cC66a130d95",
-        constructorArguments: [],
-      });
-    console.log("Verified Contract 3/4: RewardFacet");
-    await run("verify:verify", {
-      address: "0x727EB56e55Dc188672B5d9Fe0F850cC66a130d95",
-      constructorArguments: [],
-    });
-  console.log("Verified Contract 4/4: Diamond");
+    console.log("Verified Contract 2/3: FundFacet");
+
     console.log("DONE VERIFICATION");
   }
 };

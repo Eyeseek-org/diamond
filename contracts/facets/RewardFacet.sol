@@ -137,7 +137,7 @@ contract RewardFacet is Modifiers {
     function getPoolRewards (uint256 _rewId) public view returns (Reward[] memory) {
         Reward[] memory rewards = new Reward[](s.rewardList.length);
         uint256 counter = 0;
-        for (uint256 i = 0; i < s.rewardList.length; i++) {
+        for (uint256 i = 1; i < s.rewardList.length; i++) {
             if (s.rewardList[i].rewardId == _rewId) {
                 rewards[counter] = s.rewardList[i];
                 counter++;
@@ -160,14 +160,16 @@ contract RewardFacet is Modifiers {
     ///@notice - Return fund rewards to the owner from closed fund 
     ///@notice - Could be called by anyone as it does not provide any financial benefit to the caller
     ///@notice - Because of that expected to be called mainly by the contract owner 
+    ///@param _fundId - Fund id to return rewards for
     function returnRewards (uint256 _fundId) public {
+            LibDiamond.enforceIsContractOwner();
             if (s.funds[_fundId].state != 0) revert FundNotClosed(_fundId);
             for (uint256 i = 0; i < s.rewards.length; i++) {
             if (s.rewards[i].fundId == _fundId && s.rewards[i].totalNumber > 0){
                     if (s.rewards[i].state == 2 ) {
                         ///@dev - Note frontend and contract use different states to identify type
                         IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-                        rewardToken.approve(address(this), s.rewards[i].erc20amount * s.rewards[i].totalNumber);
+                        rewardToken.approve(address(this), s.rewards[i].erc20amount * s.rewards[i].totalNumber) ;
                         rewardToken.transferFrom(
                             address(this),
                             s.rewards[i].owner,
@@ -205,19 +207,20 @@ contract RewardFacet is Modifiers {
                         s.rewardList[j].rewardId == s.rewards[i].rewardId &&  s.rewards[i].state == 1 && s.rewardList[j].state != 3 && s.rewardList[j].receiver != address(0)
                     ) {
                         s.rewardList[j].state = 3;
-                        rewardNft.setApprovalForAll(s.rewardList[i].receiver,true);
+                        rewardNft.setApprovalForAll(address(this),true);
                         rewardNft.safeTransferFrom(address(this),s.rewardList[j].receiver, s.rewards[i].nftId, 1,"" );
                         emit NftReward( s.rewardList[j].receiver, s.rewards[i].contractAddress,  s.rewards[i].fundId);
                     }
                     ///@notice - Check ERC20 rewards
                     else if (s.rewardList[j].rewardId == s.rewards[i].rewardId && s.rewards[i].state == 2  && s.rewardList[j].state != 3 && s.rewardList[j].receiver != address(0)
                     ) {
+                        s.rewardList[j].state = 3;
                         rewardToken.approve( address(this), s.rewards[i].erc20amount);
                         rewardToken.transferFrom( address(this), s.rewardList[j].receiver, s.rewards[i].erc20amount );
                         emit TokenReward( s.rewardList[j].receiver,  s.rewards[i].erc20amount, s.rewards[i].fundId );
                     }
                 }
-                ///@notice - Return non-claimed tokens to the creator
+                //@notice - Return non-claimed tokens to the creator
                 if (s.rewards[i].totalNumber > s.rewards[i].actualNumber) {
                     uint256 rewardsDiff = s.rewards[i].totalNumber - s.rewards[i].actualNumber;
                     ///@notice - NFT leftovers
@@ -226,12 +229,12 @@ contract RewardFacet is Modifiers {
                         rewardNft.safeTransferFrom( address(this),  s.rewards[i].owner, s.rewards[i].nftId, rewardsDiff, "" );
                     ///@notice - ERC20 leftovers
                     } else if (s.rewards[i].state == 2) {
-                        rewardToken.approve( address(this),  s.rewards[i].erc20amount );
+                        rewardToken.approve( address(this),  s.rewards[i].erc20amount * rewardsDiff );
                         rewardToken.transferFrom( address(this), s.rewards[i].owner, s.rewards[i].erc20amount * rewardsDiff );
                     }
                 }
-                ///@notice - Closing reward pool
-                s.rewards[i].state = 3;
+                //@notice - Closing reward pool
+               s.rewards[i].state = 3;
             }
         }
     }

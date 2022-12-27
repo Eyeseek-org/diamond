@@ -188,7 +188,8 @@ contract MasterFacet is Modifiers {
     function rewardCharge(uint256 _id, uint256 _rewardId, uint256 _charged) internal {
         if ( s.rewards[_rewardId].state == 4) revert FundInactive(_rewardId);
         if ( s.rewards[_rewardId].actualNumber >= s.rewards[_rewardId].totalNumber ) revert RewardFull(_rewardId);
-        if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount == _charged ){
+        if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount > 0 ){
+            if (s.rewards[_rewardId].erc20amount != _charged ) revert InvalidAmount(_charged);
             s.rewards[_rewardId].actualNumber += 1;
             s.rewardList.push(
                 Reward({
@@ -196,10 +197,10 @@ contract MasterFacet is Modifiers {
                     rewardItemId: s.rewardList.length,
                     rewardId: _rewardId,
                     receiver: msg.sender,
-                    state: 1
+                    state: 1,
+                    charged: _charged /// @dev convert from 6 decimals (stablecoins)
                 })
             );
-            if (s.rewards[_rewardId].actualNumber == s.rewards[_rewardId].totalNumber) 
             emit RewardCharged(_id, msg.sender, _rewardId, _charged);
         } else {
             emit RewardNotCharged(_id, msg.sender, _rewardId);
