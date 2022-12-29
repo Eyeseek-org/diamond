@@ -270,12 +270,10 @@ contract MasterFacet is Modifiers {
             if (
                 s.microFunds[i].fundId == _id &&
                 s.microFunds[i].currency == _currency &&
-                s.microFunds[i].state <= 2
+                s.microFunds[i].state != 0
             ) {
                 ///@notice Send back the remaining amount to the microfund owner
                     s.microFunds[i].state = 0;
-                    s.funds[_id].balance -= s.microFunds[i].microBalance;
-                    _fundBalance -= s.microFunds[i].microBalance;
                     _token.approve(address(this), s.microFunds[i].cap);
                     _token.transferFrom(
                         address(this),
@@ -293,12 +291,10 @@ contract MasterFacet is Modifiers {
         for (uint256 i = 0; i < s.donations.length; i++) {
             if (
                 s.donations[i].fundId == _id &&
-                s.donations[i].state == 1 &&
+                s.donations[i].state != 0 &&
                 s.donations[i].currency == _currency
             ) {
                 s.donations[i].state = 0;
-                s.funds[_id].balance -= s.donations[i].amount;
-                _fundBalance -= s.donations[i].amount;
                 _token.approve(address(this), s.donations[i].amount);
                 _token.transferFrom(
                     address(this),
