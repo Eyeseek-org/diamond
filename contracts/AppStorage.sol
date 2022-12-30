@@ -55,6 +55,7 @@ struct RewardPool {
     uint256 fundId;
     uint256 totalNumber;
     uint256 actualNumber;
+    uint256 pledge;
     address owner;
     address contractAddress;
     uint256 erc20amount;
