@@ -55,6 +55,7 @@ contract MasterFacet is Modifiers {
                 fundId: 0,
                 totalNumber: 1000000000000000,
                 actualNumber: 0,
+                pledge: 0,
                 owner: msg.sender,
                 contractAddress: address(0),
                 erc20amount: 0,
@@ -188,8 +189,8 @@ contract MasterFacet is Modifiers {
     function rewardCharge(uint256 _id, uint256 _rewardId, uint256 _charged) internal {
         if ( s.rewards[_rewardId].state == 4) revert FundInactive(_rewardId);
         if ( s.rewards[_rewardId].actualNumber >= s.rewards[_rewardId].totalNumber ) revert RewardFull(_rewardId);
-        if ( _rewardId != 0 && s.rewards[_rewardId].erc20amount > 0 ){
-            if (s.rewards[_rewardId].erc20amount != _charged ) revert InvalidAmount(_charged);
+        if ( _rewardId != 0 && s.rewards[_rewardId].pledge > 0 ){
+            if (s.rewards[_rewardId].pledge != _charged ) revert InvalidAmount(_charged);
             s.rewards[_rewardId].actualNumber += 1;
             s.rewardList.push(
                 Reward({
@@ -251,18 +252,17 @@ contract MasterFacet is Modifiers {
         if (s.funds[_id].state != 1) revert FundInactive(_id);
         s.funds[_id].state = 0;
         if (s.funds[_id].usdcBalance > 0) {
-            cancelUni(_id, s.funds[_id].usdcBalance, 1, s.usdc);
+            cancelUni(_id, 1, s.usdc);
             s.funds[_id].usdcBalance = 0;
         }
         if (s.funds[_id].usdtBalance > 0) {
-            cancelUni(_id, s.funds[_id].usdtBalance, 2, s.usdt);
+            cancelUni(_id, 2, s.usdt);
             s.funds[_id].usdtBalance = 0;
         }																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				        
     }
     ///@notice - Cancel the fund and return the resources to the microfunds, universal for all supported currencies
     function cancelUni(
         uint256 _id,
-        uint256 _fundBalance,
         uint256 _currency,
         IERC20 _token
     ) internal {

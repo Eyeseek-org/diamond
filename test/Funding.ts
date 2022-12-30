@@ -215,8 +215,8 @@ describe("Funding", async function () {
 
     // ---------------- Reward generation - all three types
     await funnyToken.connect(creator).approve(diamondAddress, 20)
-    await rewardFacet.connect(creator).createReward(testId, 2, 10, funnyToken.address, 0)
-    await rewardFacet.connect(creator).createReward(testId, 2, 10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 2, 10, donationAmount, funnyToken.address, 0)
+    await rewardFacet.connect(creator).createReward(testId, 2, 10, donationAmount, funnyToken.address, 1)
     await masterFacet.connect(user).contribute(0, donationAmount, testId, 2, 1);
     await masterFacet.connect(user).contribute(0, donationAmount, testId, 2, 2);
 
@@ -244,10 +244,10 @@ describe("Funding", async function () {
     const balBefore = await funnyToken.balanceOf(creator.address);
 
     await funnyToken.connect(creator).approve(diamondAddress, 40)
-    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
-    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
-    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
-    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10,10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10,10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10,10, funnyToken.address, 1)
+    await rewardFacet.connect(creator).createReward(testId, 1, 10,10, funnyToken.address, 1)
 
     await masterFacet.connect(user).contribute(0, 10, testId, 1, 4);
     await masterFacet.cancelFund(testId);
@@ -260,30 +260,6 @@ describe("Funding", async function () {
 
     const balAfter = await funnyToken.balanceOf(creator.address);
     expect(balBefore).to.equal(balAfter)
-
-  })
-  it("Test distribute fund with claimed rewards", async function(){
-    const [bank, user, creator] = await ethers.getSigners();
-    const testId = 6;
-    fundFacet.connect(creator).createFund(1000, 30);
-    const balBefore = await funnyToken.balanceOf(creator.address);
-
-    await funnyToken.connect(creator).approve(diamondAddress, 40)
-    await rewardFacet.connect(creator).createReward(testId, 1, 10, funnyToken.address, 1)
-    // Create reward with ID = 7
-    await masterFacet.connect(user).contribute(0, 10, testId, 1, 7);
-
-    await masterFacet.distribute(testId);
-    //@param - fundId ID of the fund = testId
-    //@param - user address of the target, caller could be anyone
-    //@param - rewardId item ID from the reward pool
-    //@param - reward pool ID created in previous step
-    await rewardFacet.connect(creator).claimRewards(testId, user.address, 1, 7);
-
-    const balAfter = await funnyToken.balanceOf(creator.address);
-    expect(balBefore).not.to.equal(balAfter)
-    const balContract = await funnyToken.balanceOf(diamondAddress);
-    expect(balContract).to.equal(0)
 
   })
 });
