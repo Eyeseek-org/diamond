@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "../interfaces/IERC1155.sol";
+import '@solidstate/contracts/token/ERC1155/SolidStateERC1155.sol';
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
 import "../AppStorage.sol";
@@ -73,7 +73,7 @@ contract RewardFacet is Modifiers {
             );
         } else if (_type == 2) {
             if (_totalNumber <= 0) revert InvalidAmount(_totalNumber);
-            IERC1155 rewardNft = IERC1155(_tokenAddress);
+            SolidStateERC1155 rewardNft = SolidStateERC1155(_tokenAddress);
             //   uint256 bal = rewardNft.balanceOf(msg.sender, _rewardAmount);
             //   require(_totalNumber <= bal, "Not enough token in wallet");
             rewardNft.safeTransferFrom(
@@ -175,7 +175,7 @@ contract RewardFacet is Modifiers {
                         s.rewards[i].erc20amount * s.rewards[i].totalNumber
                     );
                 } else if (s.rewards[i].state == 1) {
-                    IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
+                    SolidStateERC1155 rewardNft = SolidStateERC1155(s.rewards[i].contractAddress);
                     rewardNft.setApprovalForAll(address(this), true);
                     rewardNft.safeTransferFrom(
                         address(this),
@@ -197,7 +197,7 @@ contract RewardFacet is Modifiers {
         if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.rewards.length; i++) {
             IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-            IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
+            SolidStateERC1155 rewardNft = SolidStateERC1155(s.rewards[i].contractAddress);
             if (s.rewards[i].fundId == _id && s.rewards[i].state != 3) {
                 for (uint256 j = 0; j < s.rewardList.length; j++) {
                     ///@notice - Check NFT rewards
