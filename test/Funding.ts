@@ -222,7 +222,7 @@ describe("Funding", async function () {
 
     // ---------------- Reward distribution (funnyToken ERC20)
     await masterFacet.distribute(testId);
-    await rewardFacet.connect(creator).distributeFundRewards(testId)
+    await rewardFacet.distributeFundRewards(testId)
 
     // ---------------- Reward balances 
     //-- Creator spent 20 tokens, 10 was returned for unclaimed ERC20

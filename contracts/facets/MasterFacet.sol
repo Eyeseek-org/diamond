@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "../interfaces/IERC1155.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../Errors.sol";
@@ -35,6 +35,7 @@ contract MasterFacet is Modifiers {
     ///@notice Helper reward pool function to gather non-token related rewards
     ///@dev Need to create fake fund 0, with fake pool 0, otherwise contribution won't work universally
     function createZeroData() public {
+        LibDiamond.enforceIsContractOwner();
         s.funds.push(
             Fund({
                 owner: address(0),
@@ -172,6 +173,7 @@ contract MasterFacet is Modifiers {
     /// @notice - Internal function activated if there are leftovers 
     /// @notice - Working only in completed microfunds
     function returnMicrofunds(uint256 _id, uint256 _currency, IERC20 _token) internal {
+        LibDiamond.enforceIsContractOwner();
         if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.microFunds.length; i++) {
         if ( s.microFunds[i].fundId == _id && s.microFunds[i].state == 1 && s.microFunds[i].currency == _currency && s.microFunds[i].cap > s.microFunds[i].microBalance) {
