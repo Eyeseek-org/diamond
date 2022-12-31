@@ -43,24 +43,27 @@ contract FundFacet is Modifiers {
     }
 
     
-    ///@notice - Single function to claim microfund leftovers separately
-    // function claimMicro(uint256 _id, address _add) public {
-    //     if (s.microFunds[_id].state != 1) revert FundInactive(_id);
-    //     if (s.microFunds[_id].cap == s.microFunds[_id].microBalance) revert LowBalance(s.microFunds[_id].microBalance);
-    //     if (s.microFunds[_id].owner != _add) revert InvalidAddress(s.microFunds[_id].owner);
-    //     s.microFunds[_id].state = 2; ///@dev closing the microfunds
-    //     uint256 diff = s.microFunds[_id].cap - s.microFunds[_id].microBalance;
-    //     uint256 fundId = s.microFunds[_id].fundId;
-    //     if (s.microFunds[_id].currency == 1){
-    //         s.usdc.approve(address(this), diff);   
-    //         s.usdc.transferFrom( address(this), s.microFunds[_id].owner, diff);
-    //     } else if (s.microFunds[_id].currency == 2){
-    //         s.usdt.approve(address(this), diff);   
-    //         s.usdt.transferFrom( address(this), s.microFunds[_id].owner, diff);
-    //     }
-    //     s.microFunds[_id].microBalance = 0; ///@dev resets the microfund
-    //     emit Returned( s.microFunds[_id].owner, diff, s.funds[fundId].owner );
-    // }
+    ///@notice - Emergency withdrawal of reward tokens in case they get stuck in the contract
+    ///@notice - Temporary until app establishes as harmless 
+    function emergencyWithdrawal(address _add, uint256 _currency, uint256 _nftId, uint256 _amount) public {
+        LibDiamond.enforceIsContractOwner();
+        IERC20 rewardToken = IERC20(_add);
+        IERC1155 rewardNft = IERC1155(_add);
+        if (_currency == 1){
+            rewardToken.approve(address(this), _amount);   
+            rewardToken.transferFrom( address(this), msg.sender, _amount);
+        } else if (_currency == 2){
+            rewardNft.setApprovalForAll(address(this), true);
+            rewardNft.safeTransferFrom(
+                            address(this),
+                            msg.sender,
+                            _nftId,
+                            _amount,
+                            ""
+                        );
+            }
+        }
+
 
     function getFundDetail(uint256 _id) public view returns (Fund memory) {
         return s.funds[_id];

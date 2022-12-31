@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "../interfaces/IERC1155.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
 import "../AppStorage.sol";
 import "../Errors.sol";
+
+
 
 contract RewardFacet is Modifiers {
     event RewardCreated(
@@ -74,7 +76,13 @@ contract RewardFacet is Modifiers {
             IERC1155 rewardNft = IERC1155(_tokenAddress);
             //   uint256 bal = rewardNft.balanceOf(msg.sender, _rewardAmount);
             //   require(_totalNumber <= bal, "Not enough token in wallet");
-            rewardNft.safeTransferFrom( msg.sender,address(this), _rewardAmount, _totalNumber,"");
+            rewardNft.safeTransferFrom(
+                msg.sender,
+                address(this),
+                _rewardAmount,
+                _totalNumber,
+                ""
+            );
             s.rewards.push(
                 RewardPool({
                     rewardId: s.rewards.length,
@@ -101,8 +109,11 @@ contract RewardFacet is Modifiers {
         );
     }
 
-
-    function getFundRewards (uint256 _fundId) public view returns (RewardPool[] memory) {
+    function getFundRewards(uint256 _fundId)
+        public
+        view
+        returns (RewardPool[] memory)
+    {
         RewardPool[] memory rewards = new RewardPool[](s.rewards.length);
         uint256 counter = 0;
         for (uint256 i = 0; i < s.rewards.length; i++) {
@@ -114,7 +125,11 @@ contract RewardFacet is Modifiers {
         return rewards;
     }
 
-    function getPoolRewards (uint256 _rewId) public view returns (Reward[] memory) {
+    function getPoolRewards(uint256 _rewId)
+        public
+        view
+        returns (Reward[] memory)
+    {
         Reward[] memory rewards = new Reward[](s.rewardList.length);
         uint256 counter = 0;
         for (uint256 i = 1; i < s.rewardList.length; i++) {
@@ -126,56 +141,59 @@ contract RewardFacet is Modifiers {
         return rewards;
     }
 
-    function getRewardItems () public view returns (Reward[] memory) {
+    function getRewardItems() public view returns (Reward[] memory) {
         Reward[] memory rewards = new Reward[](s.rewardList.length);
         uint256 counter = 0;
         for (uint256 i = 0; i < s.rewardList.length; i++) {
-                rewards[counter] = s.rewardList[i];
-                counter++;
+            rewards[counter] = s.rewardList[i];
+            counter++;
         }
         return rewards;
     }
 
-
-    ///@notice - Return fund rewards to the owner from closed fund 
+    ///@notice - Return fund rewards to the owner from closed fund
     ///@notice - Could be called by anyone as it does not provide any financial benefit to the caller
-    ///@notice - Because of that expected to be called mainly by the contract owner 
+    ///@notice - Because of that expected to be called mainly by the contract owner
     ///@param _fundId - Fund id to return rewards for
-    function returnRewards (uint256 _fundId) public {
-            LibDiamond.enforceIsContractOwner();
-            if (s.funds[_fundId].state != 0) revert FundNotClosed(_fundId);
-            for (uint256 i = 0; i < s.rewards.length; i++) {
-            if (s.rewards[i].fundId == _fundId && s.rewards[i].totalNumber > 0){
-                    if (s.rewards[i].state == 2 ) {
-                        ///@dev - Note frontend and contract use different states to identify type
-                        IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
-                        rewardToken.approve(address(this), s.rewards[i].erc20amount * s.rewards[i].totalNumber) ;
-                        rewardToken.transferFrom(
-                            address(this),
-                            s.rewards[i].owner,
-                            s.rewards[i].erc20amount * s.rewards[i].totalNumber
-                            );
-                        }
-                    else if (s.rewards[i].state == 1){
-                        IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
-                        rewardNft.setApprovalForAll(address(this), true);
-                        rewardNft.safeTransferFrom(
-                            address(this),
-                            s.rewards[i].owner,
-                            s.rewards[i].nftId,
-                            s.rewards[i].totalNumber,
-                            ""
-                        );
-                    } 
-                    s.rewards[i].state == 4; ///@dev - Set reward item state to canceled
-                }  
-            }  
+    function returnRewards(uint256 _fundId) public {
+        LibDiamond.enforceIsContractOwner();
+        if (s.funds[_fundId].state != 0) revert FundNotClosed(_fundId);
+        for (uint256 i = 0; i < s.rewards.length; i++) {
+            if (
+                s.rewards[i].fundId == _fundId && s.rewards[i].totalNumber > 0
+            ) {
+                if (s.rewards[i].state == 2) {
+                    ///@dev - Note frontend and contract use different states to identify type
+                    IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
+                    rewardToken.approve(
+                        address(this),
+                        s.rewards[i].erc20amount * s.rewards[i].totalNumber
+                    );
+                    rewardToken.transferFrom(
+                        address(this),
+                        s.rewards[i].owner,
+                        s.rewards[i].erc20amount * s.rewards[i].totalNumber
+                    );
+                } else if (s.rewards[i].state == 1) {
+                    IERC1155 rewardNft = IERC1155(s.rewards[i].contractAddress);
+                    rewardNft.setApprovalForAll(address(this), true);
+                    rewardNft.safeTransferFrom(
+                        address(this),
+                        s.rewards[i].owner,
+                        s.rewards[i].nftId,
+                        s.rewards[i].totalNumber,
+                        ""
+                    );
+                }
+                s.rewards[i].state == 4; ///@dev - Set reward item state to canceled
+            }
+        }
     }
 
-
-    ///@notice - Separated function  from MasterFacet -> distribute() 
+    ///@notice - Separated function  from MasterFacet -> distribute()
     ///@notice - Distribute rewards to backers
-    function distributeFundRewards(uint256 _id) public{
+    function distributeFundRewards(uint256 _id) public {
+        LibDiamond.enforceIsContractOwner();
         if (s.funds[_id].state != 2) revert FundNotClosed(_id);
         for (uint256 i = 0; i < s.rewards.length; i++) {
             IERC20 rewardToken = IERC20(s.rewards[i].contractAddress);
@@ -184,37 +202,79 @@ contract RewardFacet is Modifiers {
                 for (uint256 j = 0; j < s.rewardList.length; j++) {
                     ///@notice - Check NFT rewards
                     if (
-                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&  s.rewards[i].state == 1 && s.rewardList[j].state != 3 && s.rewardList[j].receiver != address(0)
+                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
+                        s.rewards[i].state == 1 &&
+                        s.rewardList[j].state != 3 &&
+                        s.rewardList[j].receiver != address(0)
                     ) {
                         s.rewardList[j].state = 3;
-                        rewardNft.setApprovalForAll(address(this),true);
-                        rewardNft.safeTransferFrom(address(this),s.rewardList[j].receiver, s.rewards[i].nftId, 1,"" );
-                        emit NftReward( s.rewardList[j].receiver, s.rewards[i].contractAddress,  s.rewards[i].fundId);
+                        rewardNft.setApprovalForAll(address(this), true);
+                        rewardNft.safeTransferFrom(
+                            address(this),
+                            s.rewardList[j].receiver,
+                            s.rewards[i].nftId,
+                            1,
+                            ""
+                        );
+                        emit NftReward(
+                            s.rewardList[j].receiver,
+                            s.rewards[i].contractAddress,
+                            s.rewards[i].fundId
+                        );
                     }
                     ///@notice - Check ERC20 rewards
-                    else if (s.rewardList[j].rewardId == s.rewards[i].rewardId && s.rewards[i].state == 2  && s.rewardList[j].state != 3 && s.rewardList[j].receiver != address(0)
+                    else if (
+                        s.rewardList[j].rewardId == s.rewards[i].rewardId &&
+                        s.rewards[i].state == 2 &&
+                        s.rewardList[j].state != 3 &&
+                        s.rewardList[j].receiver != address(0)
                     ) {
                         s.rewardList[j].state = 3;
-                        rewardToken.approve( address(this), s.rewards[i].erc20amount);
-                        rewardToken.transferFrom( address(this), s.rewardList[j].receiver, s.rewards[i].erc20amount );
-                        emit TokenReward( s.rewardList[j].receiver,  s.rewards[i].erc20amount, s.rewards[i].fundId );
+                        rewardToken.approve(
+                            address(this),
+                            s.rewards[i].erc20amount
+                        );
+                        rewardToken.transferFrom(
+                            address(this),
+                            s.rewardList[j].receiver,
+                            s.rewards[i].erc20amount
+                        );
+                        emit TokenReward(
+                            s.rewardList[j].receiver,
+                            s.rewards[i].erc20amount,
+                            s.rewards[i].fundId
+                        );
                     }
                 }
                 //@notice - Return non-claimed tokens to the creator
                 if (s.rewards[i].totalNumber > s.rewards[i].actualNumber) {
-                    uint256 rewardsDiff = s.rewards[i].totalNumber - s.rewards[i].actualNumber;
+                    uint256 rewardsDiff = s.rewards[i].totalNumber -
+                        s.rewards[i].actualNumber;
                     ///@notice - NFT leftovers
                     if (s.rewards[i].state == 1) {
                         rewardNft.setApprovalForAll(address(this), true);
-                        rewardNft.safeTransferFrom( address(this),  s.rewards[i].owner, s.rewards[i].nftId, rewardsDiff, "" );
-                    ///@notice - ERC20 leftovers
+                        rewardNft.safeTransferFrom(
+                            address(this),
+                            s.rewards[i].owner,
+                            s.rewards[i].nftId,
+                            rewardsDiff,
+                            ""
+                        );
+                        ///@notice - ERC20 leftovers
                     } else if (s.rewards[i].state == 2) {
-                        rewardToken.approve( address(this),  s.rewards[i].erc20amount * rewardsDiff );
-                        rewardToken.transferFrom( address(this), s.rewards[i].owner, s.rewards[i].erc20amount * rewardsDiff );
+                        rewardToken.approve(
+                            address(this),
+                            s.rewards[i].erc20amount * rewardsDiff
+                        );
+                        rewardToken.transferFrom(
+                            address(this),
+                            s.rewards[i].owner,
+                            s.rewards[i].erc20amount * rewardsDiff
+                        );
                     }
                 }
                 //@notice - Closing reward pool
-               s.rewards[i].state = 3;
+                s.rewards[i].state = 3;
             }
         }
     }
