@@ -58,10 +58,6 @@ describe("Funding", async function () {
 
     const Usdt = await ethers.getContractFactory("Token");
     usdtToken = await Usdt.deploy();
-
-    // const Multi = await ethers.getContractFactory("EyeseekMulti")
-    // multiToken = await Multi.deploy()
-    // multiToken.safeTransferFrom(multiToken.address, user.address, 0, 1, "")
   });
 
   it("should have all facets -- call to facetAddresses function", async () => {
@@ -260,6 +256,5 @@ describe("Funding", async function () {
 
     const balAfter = await funnyToken.balanceOf(creator.address);
     expect(balBefore).to.equal(balAfter)
-
   })
 });
