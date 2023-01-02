@@ -23,6 +23,16 @@ contract RewardFacet is Modifiers {
     event TokenReward(address backer, uint256 amount, uint256 fundId);
     event NftReward(address backer, address contractAddress, uint256 fundId);
 
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) public pure returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
     ///@notice Lock tokens as crowdfunding reward - ERC20/ERC1155
     ///@notice One project could have multiple rewards
     function createReward(
