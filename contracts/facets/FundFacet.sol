@@ -45,14 +45,14 @@ contract FundFacet is Modifiers {
     
     ///@notice - Emergency withdrawal of reward tokens in case they get stuck in the contract
     ///@notice - Temporary until app establishes as harmless 
-    function emergencyWithdrawal(address _add, uint256 _currency, uint256 _nftId, uint256 _amount) public {
+    function emergencyWithdrawal(address _add, uint256 _nftId, uint256 _amount) public {
         LibDiamond.enforceIsContractOwner();
         IERC20 rewardToken = IERC20(_add);
         IERC1155 rewardNft = IERC1155(_add);
-        if (_currency == 1){
+        if (_nftId == 0){
             rewardToken.approve(address(this), _amount);   
             rewardToken.transferFrom( address(this), msg.sender, _amount);
-        } else if (_currency == 2){
+        } else if (_nftId != 0){
             rewardNft.setApprovalForAll(address(this), true);
             rewardNft.safeTransferFrom(
                             address(this),
@@ -64,6 +64,10 @@ contract FundFacet is Modifiers {
             }
         }
 
+    function emergencyStatusChange(uint256 _id, uint256 _state) public {
+        LibDiamond.enforceIsContractOwner();
+        s.funds[_id].state = _state;
+    }
 
     function getFundDetail(uint256 _id) public view returns (Fund memory) {
         return s.funds[_id];
