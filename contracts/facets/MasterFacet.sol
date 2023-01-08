@@ -6,8 +6,6 @@ import "../AppStorage.sol";
 import "../Errors.sol";
 import "./RewardFacet.sol";
 
-import "hardhat/console.sol";
-
 contract MasterFacet is Modifiers {
 
     event MicroCreated(address owner,uint256 cap,uint256 fundId,uint256 currency,uint256 microId);
@@ -185,6 +183,35 @@ contract MasterFacet is Modifiers {
             }
         }
     }
+
+    function cancelMicro(uint256 _id) public {
+        LibDiamond.enforceIsContractOwner();
+        if (s.microFunds[_id].state != 1) revert FundNotClosed(_id);
+        s.funds[_id].micros -= 1;
+        for (uint256 i = 0; i < s.microFunds.length; i++) {
+            if (
+                s.microFunds[i].fundId == _id &&
+                s.microFunds[i].currency == _currency &&
+                s.microFunds[i].cap > 0
+            ) {
+                ///@notice Send back the remaining amount to the microfund owner
+                  
+                    s.microFunds[i].state = 0;
+                    _token.approve(address(this), s.microFunds[i].cap);
+                    _token.transferFrom(
+                        address(this),
+                        s.microFunds[i].owner,
+                        s.microFunds[i].cap
+                    );
+                    emit Returned(
+                        s.microFunds[i].owner,
+                        s.microFunds[i].cap,
+                        s.funds[i].owner
+                    );
+            }
+        }
+        emit Returned(s.microFunds[_id].owner, s.microFunds[_id].cap, s.microFunds[_id].owner);
+    }
     
     /// @notice Charge rewards during contribution process
     function rewardCharge(uint256 _id, uint256 _rewardId, uint256 _charged) internal {
@@ -261,7 +288,12 @@ contract MasterFacet is Modifiers {
             s.funds[_id].usdtBalance = 0;
         }																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				        
     }
+
     ///@notice - Cancel the fund and return the resources to the microfunds, universal for all supported currencies
+    function getMicrofundDetail (uint256 _id) public view returns (MicroFund memory) {
+        return s.microFunds[_id];
+    }
+
     function cancelUni(
         uint256 _id,
         uint256 _currency,
@@ -271,7 +303,7 @@ contract MasterFacet is Modifiers {
             if (
                 s.microFunds[i].fundId == _id &&
                 s.microFunds[i].currency == _currency &&
-                s.microFunds[i].state != 0
+                s.microFunds[i].cap > 0
             ) {
                 ///@notice Send back the remaining amount to the microfund owner
                     s.microFunds[i].state = 0;
@@ -286,6 +318,7 @@ contract MasterFacet is Modifiers {
                         s.microFunds[i].cap,
                         s.funds[i].owner
                     );
+                    s.microFunds[i].cap = 0;
             }
         }
         ///@dev Fund states - 0=Created, 1=Distributed, 2=Refunded

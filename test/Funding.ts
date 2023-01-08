@@ -257,4 +257,14 @@ describe("Funding", async function () {
     const balAfter = await funnyToken.balanceOf(creator.address);
     expect(balBefore).to.equal(balAfter)
   })
+  it("Teest cancel microfund without charge", async function(){
+    const [bank, user, creator] = await ethers.getSigners();
+    const testId = 6;
+    fundFacet.connect(creator).createFund(1000, 30);
+    const balBefore = await usdcToken.balanceOf(user.address);
+    await masterFacet.connect(user).contribute(0, 1, testId, 1, 0);
+    const balAfter = await usdcToken.balanceOf(user.address);
+    await masterFacet.cancelFund(testId);
+    expect(balBefore).to.equal(balAfter)
+  })
 });

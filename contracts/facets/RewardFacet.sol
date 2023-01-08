@@ -7,8 +7,6 @@ import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../Errors.sol";
 
-
-
 contract RewardFacet is Modifiers {
     event RewardCreated(
         uint256 rewardId,
