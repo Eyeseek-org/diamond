@@ -10,7 +10,7 @@ import {
   Token,
 } from "../typechain-types";
 
-import { deployDiamond } from "../scripts/libraries/deploy";
+import { deployDiamond } from "./libraries/deploy";
 
 describe("Funding", async function () {
   let diamondAddress: string;
