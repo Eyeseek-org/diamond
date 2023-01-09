@@ -184,35 +184,6 @@ contract MasterFacet is Modifiers {
         }
     }
 
-    function cancelMicro(uint256 _id) public {
-        LibDiamond.enforceIsContractOwner();
-        if (s.microFunds[_id].state != 1) revert FundNotClosed(_id);
-        s.funds[_id].micros -= 1;
-        for (uint256 i = 0; i < s.microFunds.length; i++) {
-            if (
-                s.microFunds[i].fundId == _id &&
-                s.microFunds[i].currency == _currency &&
-                s.microFunds[i].cap > 0
-            ) {
-                ///@notice Send back the remaining amount to the microfund owner
-                  
-                    s.microFunds[i].state = 0;
-                    _token.approve(address(this), s.microFunds[i].cap);
-                    _token.transferFrom(
-                        address(this),
-                        s.microFunds[i].owner,
-                        s.microFunds[i].cap
-                    );
-                    emit Returned(
-                        s.microFunds[i].owner,
-                        s.microFunds[i].cap,
-                        s.funds[i].owner
-                    );
-            }
-        }
-        emit Returned(s.microFunds[_id].owner, s.microFunds[_id].cap, s.microFunds[_id].owner);
-    }
-    
     /// @notice Charge rewards during contribution process
     function rewardCharge(uint256 _id, uint256 _rewardId, uint256 _charged) internal {
         if ( s.rewards[_rewardId].state == 4) revert FundInactive(_rewardId);
